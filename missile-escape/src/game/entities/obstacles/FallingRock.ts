@@ -10,7 +10,7 @@ export class FallingRock extends Phaser.Physics.Arcade.Sprite {
     super(scene, 0, 0, TEX.rock);
     scene.add.existing(this);
     scene.physics.add.existing(this);
-    this.setDepth(9);
+    this.setDepth(21);
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setAllowGravity(false);
     body.enable = false;

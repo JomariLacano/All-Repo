@@ -35,7 +35,7 @@ export function GameOverScreen({ payload, onRestart }: GameOverScreenProps) {
         <strong>{payload.survivalTime.toFixed(1)}s</strong>
       </div>
       {payload.isNewBest && <div className="new-best">New Best Score!</div>}
-      <button className="primary-btn" onClick={onRestart}>
+      <button type="button" className="primary-btn" onClick={onRestart}>
         Run Again
       </button>
     </div>

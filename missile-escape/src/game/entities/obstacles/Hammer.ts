@@ -16,7 +16,7 @@ export class Hammer {
   private running = false;
 
   constructor(scene: Phaser.Scene, hazardGroup: Phaser.Physics.Arcade.Group) {
-    this.visual = scene.add.image(0, 0, TEX.hammer).setOrigin(0.5, 0).setDepth(9);
+    this.visual = scene.add.image(0, 0, TEX.hammer).setOrigin(0.5, 0).setDepth(21);
     this.visual.setVisible(false);
 
     this.hitbox = scene.physics.add.sprite(0, 0, TEX.particle);

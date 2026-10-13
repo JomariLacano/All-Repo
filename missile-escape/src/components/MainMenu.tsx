@@ -11,7 +11,7 @@ export function MainMenu({ best, ready, onStart }: MainMenuProps) {
     <div className="overlay main-menu">
       <h1 className="title">Missile Escape</h1>
       <p className="subtitle">Run. Jump. Slide. Survive the missiles.</p>
-      <button className="primary-btn" onClick={onStart} disabled={!ready}>
+      <button type="button" className="primary-btn" onClick={onStart} disabled={!ready}>
         {ready ? 'Start Run' : 'Loading…'}
       </button>
       <div className="best-score">Best Score: {best}</div>
