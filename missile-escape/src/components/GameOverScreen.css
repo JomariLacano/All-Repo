@@ -1,0 +1,25 @@
+.game-over h2 {
+  margin: 0;
+  font-size: 2rem;
+  color: #ff5a4d;
+}
+
+.game-over .cause {
+  margin-bottom: 8px;
+  opacity: 0.9;
+}
+
+.game-over .stat-row {
+  display: flex;
+  justify-content: space-between;
+  width: 220px;
+  font-size: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 4px 0;
+}
+
+.game-over .new-best {
+  margin-top: 6px;
+  color: #ffd23f;
+  font-weight: 700;
+}

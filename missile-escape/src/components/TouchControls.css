@@ -1,0 +1,34 @@
+.touch-controls {
+  position: absolute;
+  bottom: 18px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 20px;
+  z-index: 6;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .touch-controls {
+    display: none;
+  }
+}
+
+.touch-btn {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  border: none;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #1b1b1b;
+  background: rgba(255, 255, 255, 0.75);
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.25);
+  touch-action: none;
+}
+
+.touch-btn:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.2);
+}

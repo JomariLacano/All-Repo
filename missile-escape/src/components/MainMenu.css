@@ -1,0 +1,36 @@
+.main-menu .title {
+  font-size: clamp(2rem, 7vw, 3.2rem);
+  margin: 0;
+  color: #ffd23f;
+  text-shadow: 0 4px 0 #b3780f, 0 8px 16px rgba(0, 0, 0, 0.4);
+  letter-spacing: 1px;
+}
+
+.main-menu .subtitle {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+  opacity: 0.9;
+}
+
+.main-menu .best-score {
+  font-size: 1rem;
+  opacity: 0.85;
+}
+
+.main-menu .controls-hint {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.main-menu kbd {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  font-family: inherit;
+}
