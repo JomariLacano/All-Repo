@@ -1,0 +1,8 @@
+{
+    "appService.zipIgnorePattern": [
+        "node_modules{,/**}",
+        ".vscode{,/**}"
+    ],
+    "appService.defaultWebAppToDeploy": "/subscriptions/6c877ad1-7ae2-4bd8-b705-a31243cde4f9/resourceGroups/Missile-escape/providers/Microsoft.Web/sites/Missile-escape-jomari-lacano",
+    "appService.deploySubpath": "missile-escape"
+}

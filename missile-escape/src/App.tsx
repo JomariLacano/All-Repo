@@ -15,7 +15,7 @@ type Screen = 'menu' | 'playing';
 function App() {
   const [screen, setScreen] = useState<Screen>('menu');
   const [paused, setPaused] = useState(false);
-  const { score, coins, best, gameOver, banner, startGame, restartGame } = useGameEvents();
+  const { score, coins, best, gameOver, banner, sceneReady, startGame, restartGame } = useGameEvents();
 
   const handleStart = useCallback(() => {
     setScreen('playing');
@@ -43,7 +43,7 @@ function App() {
   return (
     <div className="game-root">
       <PhaserGame />
-      {screen === 'menu' && <MainMenu best={best} onStart={handleStart} />}
+      {screen === 'menu' && <MainMenu best={best} ready={sceneReady} onStart={handleStart} />}
       {isPlaying && !paused && (
         <>
           <HUD score={score} coins={coins} best={best} onPause={handlePause} />

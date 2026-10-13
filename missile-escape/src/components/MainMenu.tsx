@@ -2,16 +2,17 @@ import './MainMenu.css';
 
 interface MainMenuProps {
   best: number;
+  ready: boolean;
   onStart: () => void;
 }
 
-export function MainMenu({ best, onStart }: MainMenuProps) {
+export function MainMenu({ best, ready, onStart }: MainMenuProps) {
   return (
     <div className="overlay main-menu">
       <h1 className="title">Missile Escape</h1>
       <p className="subtitle">Run. Jump. Slide. Survive the missiles.</p>
-      <button className="primary-btn" onClick={onStart}>
-        Start Run
+      <button className="primary-btn" onClick={onStart} disabled={!ready}>
+        {ready ? 'Start Run' : 'Loading…'}
       </button>
       <div className="best-score">Best Score: {best}</div>
       <div className="controls-hint">

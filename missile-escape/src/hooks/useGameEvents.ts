@@ -15,7 +15,9 @@ export function useGameEvents() {
   const [best, setBest] = useState<number>(() => getBestScore());
   const [gameOver, setGameOver] = useState<GameOverPayload | null>(null);
   const [banner, setBanner] = useState<Banner | null>(null);
+  const [sceneReady, setSceneReady] = useState(false);
   const bannerIdRef = useRef(0);
+  const pendingStartRef = useRef(false);
 
   useEffect(() => {
     const onScore = (payload: ScoreUpdatePayload) => {
@@ -34,15 +36,26 @@ export function useGameEvents() {
       bannerIdRef.current += 1;
       setBanner({ id: bannerIdRef.current, message: 'SURVIVAL MODE ACTIVATED' });
     };
+    // Fires once GameScene finishes booting and has registered its own
+    // start-game listener. Taps before this point would otherwise be lost.
+    const onSceneReady = () => {
+      setSceneReady(true);
+      if (pendingStartRef.current) {
+        pendingStartRef.current = false;
+        EventBus.emit(GameEvents.StartGame);
+      }
+    };
     EventBus.on(GameEvents.ScoreUpdate, onScore);
     EventBus.on(GameEvents.GameOver, onGameOver);
     EventBus.on(GameEvents.Milestone, onMilestone);
     EventBus.on(GameEvents.SurvivalModeStart, onSurvivalMode);
+    EventBus.on(GameEvents.SceneReady, onSceneReady);
     return () => {
       EventBus.off(GameEvents.ScoreUpdate, onScore);
       EventBus.off(GameEvents.GameOver, onGameOver);
       EventBus.off(GameEvents.Milestone, onMilestone);
       EventBus.off(GameEvents.SurvivalModeStart, onSurvivalMode);
+      EventBus.off(GameEvents.SceneReady, onSceneReady);
     };
   }, []);
 
@@ -51,8 +64,13 @@ export function useGameEvents() {
     setCoins(0);
     setGameOver(null);
     setBanner(null);
-    EventBus.emit(GameEvents.StartGame);
-  }, []);
+    if (sceneReady) {
+      EventBus.emit(GameEvents.StartGame);
+    } else {
+      // Scene still booting (common on slower phones) - fire once it signals ready.
+      pendingStartRef.current = true;
+    }
+  }, [sceneReady]);
 
   const restartGame = useCallback(() => {
     setScore(0);
@@ -62,5 +80,5 @@ export function useGameEvents() {
     EventBus.emit(GameEvents.RestartGame);
   }, []);
 
-  return { score, coins, best, gameOver, banner, startGame, restartGame };
+  return { score, coins, best, gameOver, banner, sceneReady, startGame, restartGame };
 }
