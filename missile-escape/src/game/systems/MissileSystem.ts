@@ -2,26 +2,34 @@ import Phaser from 'phaser';
 import { Missile } from '../entities/Missile';
 import { WarningMarker } from '../entities/WarningMarker';
 import { ObjectPool } from './ObjectPool';
-import { EventBus, GameEvents } from '../EventBus';
-import { MISSILE, WORLD } from '../constants';
-import { randFloat, pick } from '../utils/random';
+import { MISSILE, NEAR_MISS_TIERS } from '../constants';
+import { randFloat, pick, chance } from '../utils/random';
 import type { Player } from '../entities/Player';
 import type { DifficultyManager } from './DifficultyManager';
-import type { MissileSpawnSide } from '../types';
+import type { MissileSpawnSide, NearMissTier } from '../types';
 
 interface PendingWarning {
   marker: WarningMarker;
   elapsed: number;
+  offsetX: number;
+  launchDelayMs: number;
+  isSuper: boolean;
   targetX: number;
   targetY: number;
 }
 
-// Owns the warn -> lock-on -> launch -> explode lifecycle for incoming missiles.
+export type NearMissHandler = (tier: NearMissTier, bonus: number, x: number, y: number) => void;
+
+const SPAWN_SIDES: readonly MissileSpawnSide[] = ['top-left', 'top-right', 'offscreen-left', 'offscreen-right'];
+
+// Owns the warn -> lock-on -> launch -> explode lifecycle for incoming missiles,
+// including the multi-missile / wave / super-missile evolution over survival time.
 export class MissileSystem {
   readonly missileGroup: Phaser.Physics.Arcade.Group;
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
   private readonly difficulty: DifficultyManager;
+  private readonly onNearMiss: NearMissHandler;
   private readonly missilePool: ObjectPool<Missile>;
   private readonly markerPool: ObjectPool<WarningMarker>;
   private readonly activeMissiles = new Set<Missile>();
@@ -29,13 +37,14 @@ export class MissileSystem {
   private nextSpawnInS = 0;
   private cooldownS = 0;
 
-  constructor(scene: Phaser.Scene, player: Player, difficulty: DifficultyManager) {
+  constructor(scene: Phaser.Scene, player: Player, difficulty: DifficultyManager, onNearMiss: NearMissHandler) {
     this.scene = scene;
     this.player = player;
     this.difficulty = difficulty;
+    this.onNearMiss = onNearMiss;
     this.missileGroup = scene.physics.add.group();
-    this.missilePool = new ObjectPool(() => new Missile(scene, this.missileGroup), 4);
-    this.markerPool = new ObjectPool(() => new WarningMarker(scene), 3);
+    this.missilePool = new ObjectPool(() => new Missile(scene, this.missileGroup), 8);
+    this.markerPool = new ObjectPool(() => new WarningMarker(scene), 6);
     this.rollNextSpawn();
   }
 
@@ -67,12 +76,12 @@ export class MissileSystem {
       const warning = this.pendingWarnings[i];
       warning.elapsed += deltaMs;
       warning.targetX = this.player.x;
-      warning.targetY = this.player.y - this.player.displayHeight / 2;
-      warning.marker.follow(warning.targetX, warning.targetY);
-      if (warning.elapsed >= MISSILE.warningDurationMs) {
+      warning.targetY = this.player.y;
+      warning.marker.follow(this.player.x + warning.offsetX, this.player.y - this.player.displayHeight / 2);
+      if (warning.elapsed >= MISSILE.warningDurationMs + warning.launchDelayMs) {
         this.pendingWarnings.splice(i, 1);
         this.markerPool.release(warning.marker);
-        this.launchMissile(warning.targetX, warning.targetY);
+        this.launchMissile(warning.targetX, warning.targetY, warning.isSuper);
       }
     }
 
@@ -82,7 +91,7 @@ export class MissileSystem {
       const outOfBounds =
         missile.x < cam.scrollX - 300 ||
         missile.x > cam.scrollX + cam.width + 500 ||
-        missile.y > WORLD.height + 500 ||
+        missile.y > 2000 ||
         missile.y < -500;
       if (outOfBounds) {
         this.recycleMissile(missile);
@@ -91,20 +100,29 @@ export class MissileSystem {
   }
 
   private beginWarning(): void {
-    const marker = this.markerPool.acquire();
-    marker.show(this.player.x, this.player.y - this.player.displayHeight / 2);
-    this.pendingWarnings.push({
-      marker,
-      elapsed: 0,
-      targetX: this.player.x,
-      targetY: this.player.y,
-    });
+    const count = this.difficulty.missileCountPerWave;
+    const superEligible = this.difficulty.superMissileEligible;
+    for (let i = 0; i < count; i++) {
+      const marker = this.markerPool.acquire();
+      const offsetX = (i - (count - 1) / 2) * 26;
+      marker.show(this.player.x + offsetX, this.player.y - this.player.displayHeight / 2);
+      const isSuper = i === 0 && superEligible && chance(MISSILE.superMissileChance);
+      this.pendingWarnings.push({
+        marker,
+        elapsed: 0,
+        offsetX,
+        launchDelayMs: i * MISSILE.waveStaggerMs,
+        isSuper,
+        targetX: this.player.x,
+        targetY: this.player.y,
+      });
+    }
   }
 
-  private launchMissile(targetX: number, targetY: number): void {
+  private launchMissile(targetX: number, targetY: number, isSuper: boolean): void {
     const missile = this.missilePool.acquire();
     const cam = this.scene.cameras.main;
-    const side = pick<MissileSpawnSide>(['top-left', 'top-right', 'offscreen-left', 'offscreen-right']);
+    const side = pick(SPAWN_SIDES);
     let fromX = targetX;
     let fromY = -80;
     if (side === 'top-left') {
@@ -119,18 +137,30 @@ export class MissileSystem {
       fromY = targetY + randFloat(-60, 60);
     }
     missile.setData('nearMissCounted', false);
-    missile.launch(fromX, fromY, targetX, targetY, this.difficulty.missileSpeed);
+    missile.launch(fromX, fromY, targetX, targetY, this.difficulty.missileSpeed, isSuper);
     this.activeMissiles.add(missile);
   }
 
   private checkNearMiss(missile: Missile): void {
     if (missile.hasExploded || missile.getData('nearMissCounted')) return;
     const dist = Phaser.Math.Distance.Between(missile.x, missile.y, this.player.x, this.player.y);
-    if (dist < MISSILE.nearMissRadius) {
-      missile.setData('nearMissCounted', true);
-      EventBus.emit(GameEvents.NearMiss, { bonus: MISSILE.nearMissBonus });
-      this.triggerSlowMotion();
+    if (dist >= MISSILE.nearMissRadius) return;
+
+    missile.setData('nearMissCounted', true);
+    let tier: NearMissTier = 'close-call';
+    let bonus = MISSILE.nearMissBonus;
+    if (dist < NEAR_MISS_TIERS.insaneDodgeRadius) {
+      tier = 'insane-dodge';
+      bonus = MISSILE.nearMissBonus * 3;
+    } else if (dist < NEAR_MISS_TIERS.luckyEscapeRadius) {
+      tier = 'lucky-escape';
+      bonus = MISSILE.nearMissBonus * 2;
     }
+    if (missile.isSuper) {
+      bonus += MISSILE.superMissileBonus;
+    }
+    this.onNearMiss(tier, bonus, this.player.x, this.player.y - this.player.displayHeight);
+    this.triggerSlowMotion();
   }
 
   private triggerSlowMotion(): void {

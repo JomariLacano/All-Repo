@@ -93,7 +93,7 @@ export class TerrainGenerator {
 
   private generateNextChunk(): void {
     const density = this.difficulty.state.obstacleDensityMultiplier;
-    const gapChance = Phaser.Math.Clamp(0.22 * density, 0.15, 0.4);
+    const gapChance = Phaser.Math.Clamp(0.22 * density, 0.15, 0.48);
 
     if (chance(gapChance) && this.generatedUntilX > SAFE_RUNWAY) {
       const gapWidth = randFloat(TERRAIN.minGapWidth, TERRAIN.maxGapWidth);
@@ -106,6 +106,14 @@ export class TerrainGenerator {
         if (chance(0.7)) {
           this.spawnCoinArc(platformX + 10, platformY - 30, 3);
         }
+        // Fake safe path: the platform looks like a clean escape from the pit,
+        // but solid ground resumes with a hazard right at its very start -
+        // the player must react the instant they land back on the ground.
+        // Ramps in with density instead of appearing from the very first gap.
+        if (chance(Math.min(0.55, TERRAIN.fakeSafePathChance * Math.max(0, density - 1) * 3))) {
+          const trapKind = chance(0.5) ? 'spike' : 'saw';
+          this.spawnObstacle(trapKind, gapStart + gapWidth + randInt(20, 50));
+        }
       } else if (chance(0.5)) {
         this.spawnCoinArc(gapStart + gapWidth / 2 - 50, WORLD.groundY - 120, 4);
       }
@@ -113,7 +121,11 @@ export class TerrainGenerator {
       return;
     }
 
-    const groundWidth = randFloat(TERRAIN.minGroundWidth, TERRAIN.maxGroundWidth);
+    // Segments shrink (and therefore obstacles sit closer together) as density rises.
+    const widthShrink = Phaser.Math.Clamp(1 - (density - 1) * 0.12, 0.45, 1);
+    const minWidth = Math.max(TERRAIN.minGroundWidthFloor, TERRAIN.minGroundWidth * widthShrink);
+    const maxWidth = Math.max(minWidth + 80, TERRAIN.maxGroundWidth * widthShrink);
+    const groundWidth = randFloat(minWidth, maxWidth);
     const groundStart = this.generatedUntilX;
     this.addGroundSegment(groundStart, groundWidth);
     this.populateGround(groundStart, groundWidth, density);
@@ -122,9 +134,17 @@ export class TerrainGenerator {
 
   private populateGround(start: number, width: number, density: number): void {
     const margin = 70;
-    if (width > margin * 2 && this.generatedUntilX > SAFE_RUNWAY && chance(Math.min(0.75, 0.4 * density))) {
+    if (width > margin * 2 && this.generatedUntilX > SAFE_RUNWAY && chance(Math.min(0.92, 0.4 * density))) {
+      const kind = pick(OBSTACLE_TYPES);
       const x = randFloat(start + margin, start + width - margin);
-      this.spawnObstacle(pick(OBSTACLE_TYPES), x);
+      this.spawnObstacle(kind, x);
+
+      // Combine multiple obstacle types together once density climbs high enough.
+      if (width > margin * 3 && chance(Math.min(0.7, TERRAIN.comboObstacleChance * (density - 0.6)))) {
+        const comboKind = pick(OBSTACLE_TYPES.filter((k) => k !== kind));
+        const comboX = Phaser.Math.Clamp(x + randFloat(90, 150), start + margin, start + width - margin);
+        this.spawnObstacle(comboKind, comboX);
+      }
     }
     if (chance(0.55)) {
       const coinX = randFloat(start + 40, start + width - 40);

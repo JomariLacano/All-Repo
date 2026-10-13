@@ -5,6 +5,7 @@ import { HUD } from './components/HUD';
 import { GameOverScreen } from './components/GameOverScreen';
 import { TouchControls } from './components/TouchControls';
 import { PauseOverlay } from './components/PauseOverlay';
+import { MilestoneBanner } from './components/MilestoneBanner';
 import { useGameEvents } from './hooks/useGameEvents';
 import { EventBus, GameEvents } from './game/EventBus';
 import './App.css';
@@ -14,7 +15,7 @@ type Screen = 'menu' | 'playing';
 function App() {
   const [screen, setScreen] = useState<Screen>('menu');
   const [paused, setPaused] = useState(false);
-  const { score, coins, best, gameOver, startGame, restartGame } = useGameEvents();
+  const { score, coins, best, gameOver, banner, startGame, restartGame } = useGameEvents();
 
   const handleStart = useCallback(() => {
     setScreen('playing');
@@ -53,6 +54,7 @@ function App() {
       {screen === 'playing' && gameOver && (
         <GameOverScreen payload={gameOver} onRestart={handleRestart} />
       )}
+      {isPlaying && <MilestoneBanner banner={banner} />}
     </div>
   );
 }

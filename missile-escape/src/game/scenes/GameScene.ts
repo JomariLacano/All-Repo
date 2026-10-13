@@ -12,19 +12,34 @@ import { DifficultyManager } from '../systems/DifficultyManager';
 import { ScoreManager } from '../systems/ScoreManager';
 import { ParallaxBackground } from '../systems/ParallaxBackground';
 import { ParticleManager } from '../systems/ParticleManager';
-import { WeatherSystem } from '../systems/WeatherSystem';
+import { WorldEventSystem } from '../systems/WorldEventSystem';
+import { VisualEffects } from '../systems/VisualEffects';
 import { InputController } from '../systems/InputController';
-import type { GameStatus, GameOverCause } from '../types';
+import type { GameStatus, GameOverCause, NearMissTier } from '../types';
 
 type ArcadeBody = Phaser.Types.Physics.Arcade.GameObjectWithBody;
 
+const NEAR_MISS_TEXT: Record<NearMissTier, string> = {
+  'close-call': 'Close Call!',
+  'lucky-escape': 'Lucky Escape!',
+  'insane-dodge': 'Insane Dodge!',
+};
+
+const NEAR_MISS_COLOR: Record<NearMissTier, string> = {
+  'close-call': '#ffe16b',
+  'lucky-escape': '#6fe050',
+  'insane-dodge': '#ff5a4d',
+};
+
 export class GameScene extends Phaser.Scene {
   private status: GameStatus = 'menu';
+  private survivalModeAnnounced = false;
 
   private player!: Player;
   private background!: ParallaxBackground;
   private particles!: ParticleManager;
-  private weather!: WeatherSystem;
+  private worldEvents!: WorldEventSystem;
+  private visualEffects!: VisualEffects;
   private difficulty!: DifficultyManager;
   private terrain!: TerrainGenerator;
   private missiles!: MissileSystem;
@@ -37,20 +52,25 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     this.status = 'menu';
+    this.survivalModeAnnounced = false;
     this.cameras.main.setBackgroundColor('#6ec6ff');
 
     this.background = new ParallaxBackground(this);
     this.particles = new ParticleManager(this);
-    this.weather = new WeatherSystem(this);
+    this.visualEffects = new VisualEffects(this);
     this.difficulty = new DifficultyManager();
     this.terrain = new TerrainGenerator(this, this.difficulty);
     this.terrain.reset();
+    this.worldEvents = new WorldEventSystem(this, this.terrain.platformGroup);
 
     this.player = new Player(this, PLAYER.startX, WORLD.groundY);
     this.player.runSpeed = 0;
+    this.player.onLanded((x, y) => this.particles.runDust(x, y));
     this.inputController = new InputController(this, this.player);
 
-    this.missiles = new MissileSystem(this, this.player, this.difficulty);
+    this.missiles = new MissileSystem(this, this.player, this.difficulty, (tier, bonus, x, y) =>
+      this.handleNearMiss(tier, bonus, x, y),
+    );
     this.scoreManager = new ScoreManager();
 
     this.physics.add.collider(this.player, this.terrain.groundGroup);
@@ -67,11 +87,7 @@ export class GameScene extends Phaser.Scene {
       (hazard) => this.handleHazardLanded(hazard as ArcadeBody),
     );
 
-    this.physics.add.overlap(
-      this.player,
-      this.terrain.hazardGroup,
-      () => this.endGame('obstacle'),
-    );
+    this.physics.add.overlap(this.player, this.terrain.hazardGroup, () => this.endGame('obstacle'));
     this.physics.add.overlap(
       this.player,
       this.terrain.coinGroup,
@@ -93,6 +109,18 @@ export class GameScene extends Phaser.Scene {
       (missile) => this.handleMissileTerrainHit(missile as Missile),
     );
 
+    this.physics.add.overlap(this.player, this.worldEvents.meteorGroup, () => this.endGame('meteor'));
+    this.physics.add.collider(
+      this.worldEvents.meteorGroup,
+      this.terrain.groundGroup,
+      (meteor) => this.handleMeteorImpact(meteor as Phaser.Physics.Arcade.Sprite),
+    );
+    this.physics.add.collider(
+      this.worldEvents.meteorGroup,
+      this.terrain.platformGroup,
+      (meteor) => this.handleMeteorImpact(meteor as Phaser.Physics.Arcade.Sprite),
+    );
+
     this.cameras.main.scrollX = 0;
 
     EventBus.on(GameEvents.StartGame, this.handleStartGame);
@@ -106,7 +134,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(time: number, delta: number): void {
-    this.player.update();
+    this.player.update(delta);
 
     if (this.status === 'playing') {
       this.difficulty.update(delta);
@@ -114,6 +142,9 @@ export class GameScene extends Phaser.Scene {
       this.terrain.update(time, this.cameras.main);
       this.missiles.update(delta);
       this.scoreManager.update(delta);
+      this.worldEvents.update(delta, this.cameras.main);
+      this.visualEffects.update(delta, this.player);
+      this.checkSurvivalMode();
 
       if (Math.random() < 0.02 && this.player.isGrounded) {
         this.particles.runDust(this.player.x, WORLD.groundY);
@@ -124,9 +155,16 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    this.weather.update(delta);
     this.cameras.main.scrollX = this.player.x - 220;
     this.background.update(this.cameras.main.scrollX);
+  }
+
+  private checkSurvivalMode(): void {
+    if (!this.survivalModeAnnounced && this.difficulty.survivalMode) {
+      this.survivalModeAnnounced = true;
+      EventBus.emit(GameEvents.SurvivalModeStart);
+      this.cameras.main.flash(400, 255, 40, 40, false);
+    }
   }
 
   private handleStartGame = (): void => {
@@ -157,12 +195,15 @@ export class GameScene extends Phaser.Scene {
     this.scoreManager.reset();
     this.terrain.reset();
     this.missiles.reset();
-    this.weather.reset();
+    this.worldEvents.reset();
+    this.survivalModeAnnounced = false;
 
     this.player.setPosition(PLAYER.startX, WORLD.groundY);
     this.player.setTexture(TEX.player);
     this.player.clearTint();
     this.player.setAngle(0);
+    this.player.setRotation(0);
+    this.player.setScale(1);
     this.player.state = 'running';
     this.player.runSpeed = PLAYER.baseRunSpeed;
     const body = this.player.body as Phaser.Physics.Arcade.Body;
@@ -191,20 +232,36 @@ export class GameScene extends Phaser.Scene {
     this.terrain.releaseCoin(coinObj);
   }
 
+  private handleNearMiss(tier: NearMissTier, bonus: number, x: number, y: number): void {
+    if (this.status !== 'playing') return;
+    this.scoreManager.addNearMiss(bonus);
+    this.visualEffects.spawnFloatingText(x, y, NEAR_MISS_TEXT[tier], NEAR_MISS_COLOR[tier]);
+    this.visualEffects.flash(tier === 'insane-dodge' ? 1 : tier === 'lucky-escape' ? 0.6 : 0.3);
+  }
+
   private handleMissileHitPlayer(missile: Missile): void {
     if (this.status !== 'playing' || missile.hasExploded) return;
-    this.spawnExplosion(missile.x, missile.y, 0.02);
+    this.spawnExplosion(missile.x, missile.y, missile.isSuper ? 0.035 : 0.02);
     this.missiles.explodeMissile(missile);
     this.endGame('missile');
   }
 
   private handleMissileTerrainHit(missile: Missile): void {
     if (missile.hasExploded) return;
-    this.spawnExplosion(missile.x, missile.y, 0.012);
+    this.spawnExplosion(missile.x, missile.y, missile.isSuper ? 0.028 : 0.012);
     this.missiles.explodeMissile(missile);
   }
 
+  private handleMeteorImpact(meteor: Phaser.Physics.Arcade.Sprite): void {
+    const record = this.worldEvents.findMeteor(meteor);
+    if (!record) return;
+    this.particles.explosionDebris(meteor.x, meteor.y);
+    this.cameras.main.shake(140, 0.008);
+    this.worldEvents.despawnMeteor(record);
+  }
+
   private spawnExplosion(x: number, y: number, shakeIntensity: number): void {
+    const intensity = this.difficulty.survivalMode ? shakeIntensity * 1.4 : shakeIntensity;
     this.particles.explosionDebris(x, y);
     const ring = this.add.image(x, y, TEX.shockwave).setDepth(29).setAlpha(0.9).setScale(0.2);
     this.tweens.add({
@@ -215,7 +272,7 @@ export class GameScene extends Phaser.Scene {
       ease: 'Cubic.easeOut',
       onComplete: () => ring.destroy(),
     });
-    this.cameras.main.shake(260, shakeIntensity);
+    this.cameras.main.shake(260, intensity);
   }
 
   private endGame(cause: GameOverCause): void {
@@ -223,7 +280,8 @@ export class GameScene extends Phaser.Scene {
     this.status = 'gameover';
     this.player.die();
     this.inputController.setEnabled(false);
-    this.cameras.main.shake(220, cause === 'missile' ? 0.02 : 0.012);
+    const intensity = this.difficulty.survivalMode ? 0.03 : cause === 'missile' ? 0.02 : 0.012;
+    this.cameras.main.shake(220, intensity);
     const payload = this.scoreManager.finish(cause);
     EventBus.emit(GameEvents.GameOver, payload);
   }
@@ -236,3 +294,4 @@ export class GameScene extends Phaser.Scene {
     this.inputController.destroy();
   };
 }
+

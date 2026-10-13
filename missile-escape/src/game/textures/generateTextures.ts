@@ -3,6 +3,12 @@ import Phaser from 'phaser';
 export const TEX = {
   player: 'tex-player',
   playerSlide: 'tex-player-slide',
+  playerRun0: 'tex-player-run-0',
+  playerRun1: 'tex-player-run-1',
+  playerRun2: 'tex-player-run-2',
+  playerRun3: 'tex-player-run-3',
+  playerJump: 'tex-player-jump',
+  playerSkid: 'tex-player-skid',
   ground: 'tex-ground',
   platform: 'tex-platform',
   coin: 'tex-coin',
@@ -66,6 +72,50 @@ export function generateGameTextures(scene: Phaser.Scene): void {
     gfx.fillRoundedRect(4, 28, 14, 10, 4);
     gfx.fillRoundedRect(24, 28, 14, 10, 4);
   });
+
+  // --- Running cycle, jump, and landing-skid poses (sprint animation frames) ---
+  const runnerPose = (
+    gfx: Phaser.GameObjects.Graphics,
+    lift: number,
+    legL: [number, number, number, number],
+    legR: [number, number, number, number],
+    armL: [number, number, number, number],
+    armR: [number, number, number, number],
+  ) => {
+    gfx.fillStyle(0x2d6cdf, 1);
+    gfx.fillRoundedRect(10, 22 + lift, 30, 36, 10);
+    gfx.fillStyle(0xffcf9e, 1);
+    gfx.fillCircle(28, 16 + lift, 15);
+    gfx.fillStyle(0xff5252, 1);
+    gfx.fillRoundedRect(10, 4 + lift, 34, 11, 5);
+    gfx.fillStyle(0x1b1b1b, 1);
+    gfx.fillCircle(34, 15 + lift, 3);
+    gfx.fillStyle(0x24408f, 1);
+    gfx.fillRoundedRect(...legL, 4);
+    gfx.fillRoundedRect(...legR, 4);
+    gfx.fillStyle(0xffcf9e, 1);
+    gfx.fillRoundedRect(...armL, 4);
+    gfx.fillRoundedRect(...armR, 4);
+  };
+
+  draw(56, 70, TEX.playerRun0, (gfx) =>
+    runnerPose(gfx, 0, [10, 48, 12, 14], [32, 52, 11, 20], [4, 30, 10, 18], [40, 20, 10, 22]),
+  );
+  draw(56, 70, TEX.playerRun1, (gfx) =>
+    runnerPose(gfx, -5, [16, 50, 11, 14], [30, 50, 11, 14], [10, 26, 10, 20], [36, 26, 10, 20]),
+  );
+  draw(56, 70, TEX.playerRun2, (gfx) =>
+    runnerPose(gfx, 0, [13, 52, 11, 20], [34, 48, 12, 14], [4, 20, 10, 22], [42, 30, 10, 18]),
+  );
+  draw(56, 70, TEX.playerRun3, (gfx) =>
+    runnerPose(gfx, -5, [16, 50, 11, 14], [30, 50, 11, 14], [36, 26, 10, 20], [10, 26, 10, 20]),
+  );
+  draw(56, 70, TEX.playerJump, (gfx) =>
+    runnerPose(gfx, -3, [15, 54, 12, 10], [29, 54, 12, 10], [2, 14, 10, 20], [44, 14, 10, 20]),
+  );
+  draw(56, 70, TEX.playerSkid, (gfx) =>
+    runnerPose(gfx, 4, [2, 50, 13, 18], [41, 50, 13, 18], [0, 34, 10, 16], [46, 30, 10, 20]),
+  );
 
   // --- Ground tile ---
   draw(64, 64, TEX.ground, (gfx) => {

@@ -6,9 +6,11 @@ export type PlayerState = 'running' | 'jumping' | 'sliding' | 'dead';
 
 export type MissileSpawnSide = 'top-left' | 'top-right' | 'offscreen-left' | 'offscreen-right';
 
-export type WeatherType = 'clear' | 'rain' | 'snow' | 'wind';
+export type WorldEventType = 'clear' | 'rainstorm' | 'wind' | 'fog' | 'meteor-shower' | 'earthquake';
 
-export type GameOverCause = 'obstacle' | 'pit' | 'missile';
+export type GameOverCause = 'obstacle' | 'pit' | 'missile' | 'meteor';
+
+export type NearMissTier = 'close-call' | 'lucky-escape' | 'insane-dodge';
 
 export interface ScoreUpdatePayload {
   score: number;
@@ -31,8 +33,11 @@ export interface DifficultyState {
   obstacleDensityMultiplier: number;
   missileFrequencyMultiplier: number;
   missileSpeedMultiplier: number;
+  survivalMode: boolean;
 }
 
-export interface NearMissPayload {
-  bonus: number;
+export interface MilestonePayload {
+  score: number;
+  message: string;
 }
+

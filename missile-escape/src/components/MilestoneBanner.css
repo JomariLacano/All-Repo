@@ -1,0 +1,38 @@
+@keyframes milestone-slide-in {
+  0% {
+    transform: translate(-50%, -30px);
+    opacity: 0;
+  }
+  12% {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+  88% {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -20px);
+    opacity: 0;
+  }
+}
+
+.milestone-banner {
+  position: absolute;
+  top: 64px;
+  left: 50%;
+  max-width: 86%;
+  z-index: 20;
+  padding: 10px 22px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(20, 24, 34, 0.92), rgba(10, 12, 18, 0.92));
+  border: 1px solid rgba(255, 209, 102, 0.6);
+  color: #ffe16b;
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-align: center;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+  animation: milestone-slide-in 3.6s ease forwards;
+  pointer-events: none;
+}

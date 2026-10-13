@@ -1,16 +1,17 @@
 import { EventBus, GameEvents } from '../EventBus';
-import { SCORING } from '../constants';
+import { SCORING, MILESTONES } from '../constants';
 import { getBestScore, setBestScore } from '../utils/storage';
 import type { GameOverCause, GameOverPayload } from '../types';
 
-// Tracks survival time + coin bonuses, emits live score updates, and
-// reconciles the best score against localStorage at game over.
+// Tracks survival time + coin bonuses, emits live score updates, fires
+// milestone banners when crossed, and reconciles the best score at game over.
 export class ScoreManager {
   private survivalMs = 0;
   private coinScore = 0;
   private coinsCollected = 0;
   private nearMisses = 0;
   private lastEmitMs = 0;
+  private nextMilestoneIndex = 0;
 
   reset(): void {
     this.survivalMs = 0;
@@ -18,11 +19,13 @@ export class ScoreManager {
     this.coinsCollected = 0;
     this.nearMisses = 0;
     this.lastEmitMs = 0;
+    this.nextMilestoneIndex = 0;
   }
 
   update(deltaMs: number): void {
     this.survivalMs += deltaMs;
     this.lastEmitMs += deltaMs;
+    this.checkMilestones();
     if (this.lastEmitMs >= 100) {
       this.lastEmitMs = 0;
       EventBus.emit(GameEvents.ScoreUpdate, {
@@ -30,6 +33,15 @@ export class ScoreManager {
         coins: this.coinsCollected,
         survivalTime: this.survivalMs / 1000,
       });
+    }
+  }
+
+  private checkMilestones(): void {
+    const score = this.currentScore;
+    while (this.nextMilestoneIndex < MILESTONES.length && score >= MILESTONES[this.nextMilestoneIndex].score) {
+      const milestone = MILESTONES[this.nextMilestoneIndex];
+      EventBus.emit(GameEvents.Milestone, { score: milestone.score, message: milestone.message });
+      this.nextMilestoneIndex += 1;
     }
   }
 
@@ -65,3 +77,4 @@ export class ScoreManager {
     };
   }
 }
+

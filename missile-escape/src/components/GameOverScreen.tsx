@@ -10,6 +10,7 @@ const CAUSE_LABEL: Record<GameOverPayload['cause'], string> = {
   obstacle: 'You hit an obstacle!',
   pit: 'You fell into a pit!',
   missile: 'A missile got you!',
+  meteor: 'A meteor crushed you!',
 };
 
 export function GameOverScreen({ payload, onRestart }: GameOverScreenProps) {

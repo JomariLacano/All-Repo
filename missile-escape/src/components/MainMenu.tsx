@@ -22,6 +22,9 @@ export function MainMenu({ best, onStart }: MainMenuProps) {
           <kbd>S</kbd> Slide
         </span>
       </div>
+      <div className="bonus-tip">
+        🎉 Score 10,000+? Screenshot it and send to Jomari Lacano for ₱100 GCash reward!
+      </div>
     </div>
   );
 }

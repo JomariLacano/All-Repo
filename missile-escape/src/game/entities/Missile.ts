@@ -1,8 +1,10 @@
 import Phaser from 'phaser';
 import { TEX } from '../textures/generateTextures';
+import { MISSILE } from '../constants';
 
 export class Missile extends Phaser.Physics.Arcade.Sprite {
   hasExploded = false;
+  isSuper = false;
 
   constructor(scene: Phaser.Scene, group: Phaser.Physics.Arcade.Group) {
     super(scene, 0, 0, TEX.missile);
@@ -11,24 +13,36 @@ export class Missile extends Phaser.Physics.Arcade.Sprite {
     this.setDepth(16);
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setAllowGravity(false);
-    body.setSize(this.width * 0.75, this.height * 0.6, true);
     body.enable = false;
     this.setActive(false);
     this.setVisible(false);
     group.add(this);
   }
 
-  launch(fromX: number, fromY: number, targetX: number, targetY: number, speed: number): void {
+  launch(
+    fromX: number,
+    fromY: number,
+    targetX: number,
+    targetY: number,
+    speed: number,
+    isSuper = false,
+  ): void {
     this.hasExploded = false;
+    this.isSuper = isSuper;
     this.setPosition(fromX, fromY);
     this.setActive(true);
     this.setVisible(true);
+    this.setScale(isSuper ? MISSILE.superMissileScale : 1);
+    this.setTint(isSuper ? 0xff6b5a : 0xffffff);
     const angle = Phaser.Math.Angle.Between(fromX, fromY, targetX, targetY);
     this.setRotation(angle);
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.enable = true;
     body.reset(fromX, fromY);
-    this.scene.physics.velocityFromRotation(angle, speed, body.velocity);
+    const scale = isSuper ? MISSILE.superMissileScale : 1;
+    body.setSize(this.width * 0.75 * scale, this.height * 0.6 * scale, true);
+    const launchSpeed = isSuper ? speed * MISSILE.superMissileSpeedMultiplier : speed;
+    this.scene.physics.velocityFromRotation(angle, launchSpeed, body.velocity);
   }
 
   despawn(): void {
@@ -37,5 +51,8 @@ export class Missile extends Phaser.Physics.Arcade.Sprite {
     body.enable = false;
     this.setActive(false);
     this.setVisible(false);
+    this.setScale(1);
+    this.clearTint();
   }
 }
+

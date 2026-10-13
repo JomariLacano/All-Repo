@@ -26,6 +26,18 @@
   opacity: 0.8;
 }
 
+.main-menu .bonus-tip {
+  margin-top: 14px;
+  max-width: 320px;
+  padding: 8px 14px;
+  font-size: 0.78rem;
+  line-height: 1.3;
+  color: #ffe9a8;
+  background: rgba(255, 210, 63, 0.12);
+  border: 1px solid rgba(255, 210, 63, 0.4);
+  border-radius: 999px;
+}
+
 .main-menu kbd {
   display: inline-block;
   padding: 2px 8px;

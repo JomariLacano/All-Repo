@@ -3,11 +3,24 @@ import { TEX } from '../textures/generateTextures';
 import { PLAYER } from '../constants';
 import type { PlayerState } from '../types';
 
+const RUN_FRAMES = [TEX.playerRun0, TEX.playerRun1, TEX.playerRun2, TEX.playerRun3] as const;
+const BASE_FRAME_DURATION_MS = 150;
+const SKID_DURATION_MS = 220;
+const LEAN_MAX_RAD = 0.16;
+const LEAN_SPEED_RANGE = 500;
+const LANDING_IMPACT_VELOCITY = 350;
+
 export class Player extends Phaser.Physics.Arcade.Sprite {
   state: PlayerState = 'running';
   runSpeed = PLAYER.baseRunSpeed;
   private jumpsUsed = 0;
   private sliding = false;
+  private wasGrounded = true;
+  private previousVelocityY = 0;
+  private runFrameTimer = 0;
+  private runFrameIndex = 0;
+  private skidTimer = 0;
+  private landedCallback?: (x: number, y: number) => void;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, TEX.player);
@@ -17,7 +30,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setDepth(20);
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setSize(PLAYER.width, PLAYER.height);
-    body.setMaxVelocity(PLAYER.maxRunSpeed + 50, 1600);
+    body.setMaxVelocity(100000, 1600);
+  }
+
+  /** Called by GameScene so landings can spawn dust particles without a circular import. */
+  onLanded(callback: (x: number, y: number) => void): void {
+    this.landedCallback = callback;
   }
 
   get isGrounded(): boolean {
@@ -37,6 +55,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       body.setVelocityY(PLAYER.jumpVelocity);
       this.jumpsUsed = 1;
       this.state = 'jumping';
+      this.setTexture(TEX.playerJump);
     } else if (this.jumpsUsed === 1) {
       body.setVelocityY(PLAYER.doubleJumpVelocity);
       this.jumpsUsed = 2;
@@ -55,6 +74,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.sliding = true;
     this.state = 'sliding';
     this.setTexture(TEX.playerSlide);
+    this.setRotation(0);
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setSize(PLAYER.width + 6, PLAYER.slideHeight);
   }
@@ -77,17 +97,75 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setTint(0xff5a4d);
   }
 
-  update(): void {
+  update(deltaMs: number): void {
     if (this.state === 'dead') return;
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setVelocityX(this.runSpeed);
-    if (this.isGrounded) {
+
+    const grounded = this.isGrounded;
+    if (grounded && !this.wasGrounded) {
+      this.handleLanding();
+    }
+    this.wasGrounded = grounded;
+    this.previousVelocityY = body.velocity.y;
+
+    if (grounded) {
       this.jumpsUsed = 0;
       if (this.state === 'jumping') {
         this.state = this.sliding ? 'sliding' : 'running';
       }
     } else if (!this.sliding) {
       this.state = 'jumping';
+      this.setTexture(TEX.playerJump);
+    }
+
+    if (this.skidTimer > 0) {
+      this.skidTimer -= deltaMs;
+      if (this.skidTimer <= 0) {
+        this.runFrameIndex = 0;
+      }
+    } else if (this.state === 'running') {
+      this.updateRunAnimation(deltaMs);
+    }
+
+    this.updateLean(deltaMs);
+  }
+
+  private handleLanding(): void {
+    if (this.previousVelocityY >= LANDING_IMPACT_VELOCITY && !this.sliding) {
+      this.skidTimer = SKID_DURATION_MS;
+      this.setTexture(TEX.playerSkid);
+      this.scene.tweens.add({
+        targets: this,
+        scaleY: 0.82,
+        duration: 90,
+        yoyo: true,
+        ease: 'Quad.easeOut',
+      });
+      this.landedCallback?.(this.x, this.y);
     }
   }
+
+  private updateRunAnimation(deltaMs: number): void {
+    const speedRatio = Math.max(1, this.runSpeed / PLAYER.baseRunSpeed);
+    const frameDuration = BASE_FRAME_DURATION_MS / speedRatio;
+    this.runFrameTimer += deltaMs;
+    if (this.runFrameTimer >= frameDuration) {
+      this.runFrameTimer = 0;
+      this.runFrameIndex = (this.runFrameIndex + 1) % RUN_FRAMES.length;
+      this.setTexture(RUN_FRAMES[this.runFrameIndex]);
+    }
+  }
+
+  private updateLean(deltaMs: number): void {
+    if (this.state !== 'running') {
+      this.rotation = Phaser.Math.Linear(this.rotation, 0, 0.15);
+      return;
+    }
+    const overSpeed = Phaser.Math.Clamp((this.runSpeed - PLAYER.baseRunSpeed) / LEAN_SPEED_RANGE, 0, 1);
+    const target = overSpeed * LEAN_MAX_RAD;
+    const lerpFactor = Phaser.Math.Clamp(deltaMs / 120, 0, 1);
+    this.rotation = Phaser.Math.Linear(this.rotation, target, lerpFactor);
+  }
 }
+
