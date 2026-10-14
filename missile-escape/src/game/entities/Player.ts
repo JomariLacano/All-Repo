@@ -16,6 +16,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   runSpeed = PLAYER.baseRunSpeed;
   private jumpsUsed = 0;
   private sliding = false;
+  private grounded = true;
   private wasGrounded = true;
   private previousVelocityY = 0;
   private runFrameTimer = 0;
@@ -52,9 +53,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (this.state === 'dead') return;
     if (this.sliding) this.endSlide();
     const body = this.body as Phaser.Physics.Arcade.Body;
-    if (this.isGrounded) {
+    if (this.grounded) {
       body.setVelocityY(PLAYER.jumpVelocity);
       this.jumpsUsed = 1;
+      // Mark airborne immediately - the Arcade body's touching/blocked flags
+      // only refresh once per physics step, so a fast double-tap calling
+      // jump() twice in the same frame would otherwise still see grounded
+      // and repeat the ground jump instead of double-jumping.
+      this.grounded = false;
       this.state = 'jumping';
       this.setTexture(TEX.playerJump);
       sound.play('jump');
@@ -111,6 +117,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.handleLanding();
     }
     this.wasGrounded = grounded;
+    this.grounded = grounded;
     this.previousVelocityY = body.velocity.y;
 
     if (grounded) {

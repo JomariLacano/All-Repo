@@ -88,7 +88,15 @@ export class GameScene extends Phaser.Scene {
       (hazard) => this.handleHazardLanded(hazard as ArcadeBody),
     );
 
-    this.physics.add.overlap(this.player, this.terrain.hazardGroup, () => this.endGame('obstacle'));
+    this.physics.add.overlap(this.player, this.terrain.hazardGroup, (_player, hazard) => {
+      // Defensive guard: a pooled hazard not yet fully despawned should never
+      // end the run - only react if it's genuinely active. (Hammer's hitbox
+      // is intentionally always invisible - it tracks a separate visual - so
+      // only "active" is checked, not "visible".)
+      const obj = hazard as Phaser.GameObjects.GameObject & { active: boolean };
+      if (!obj.active) return;
+      this.endGame('obstacle');
+    });
     this.physics.add.overlap(
       this.player,
       this.terrain.coinGroup,
