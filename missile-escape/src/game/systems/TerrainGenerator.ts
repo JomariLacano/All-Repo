@@ -159,7 +159,13 @@ export class TerrainGenerator {
       case 'spike': {
         const spike = this.spikePool.acquire();
         spike.spawn(centerX, groundTopY);
-        this.active.push({ cleanupX: centerX + 50, release: () => this.spikePool.release(spike) });
+        this.active.push({
+          cleanupX: centerX + 50,
+          release: () => {
+            spike.despawn();
+            this.spikePool.release(spike);
+          },
+        });
         break;
       }
       case 'saw': {
@@ -168,7 +174,10 @@ export class TerrainGenerator {
         saw.spawn(centerX, groundTopY - 44, randFloat(50, 90), vertical, 1 + density * 0.25);
         this.active.push({
           cleanupX: centerX + 90,
-          release: () => this.sawPool.release(saw),
+          release: () => {
+            saw.despawn();
+            this.sawPool.release(saw);
+          },
           tick: (time) => saw.update(time),
         });
         break;
@@ -187,7 +196,13 @@ export class TerrainGenerator {
       case 'barrel': {
         const barrel = this.barrelPool.acquire();
         barrel.spawn(centerX, groundTopY);
-        this.active.push({ cleanupX: centerX + 50, release: () => this.barrelPool.release(barrel) });
+        this.active.push({
+          cleanupX: centerX + 50,
+          release: () => {
+            barrel.despawn();
+            this.barrelPool.release(barrel);
+          },
+        });
         break;
       }
       case 'rock': {
@@ -196,7 +211,10 @@ export class TerrainGenerator {
         rock.spawn(triggerX, centerX, groundTopY - 420);
         this.active.push({
           cleanupX: centerX + 60,
-          release: () => this.rockPool.release(rock),
+          release: () => {
+            rock.despawn();
+            this.rockPool.release(rock);
+          },
           tick: (_time, camRightEdge) => rock.update(camRightEdge),
         });
         break;
@@ -214,7 +232,10 @@ export class TerrainGenerator {
       coin.spawn(centerX + offset, baseY - arcLift, isGolden, isGolden ? SCORING.goldenCoinValue : SCORING.coinValue);
       const entry: ActiveEntry = {
         cleanupX: centerX + offset + 30,
-        release: () => this.coinPool.release(coin),
+        release: () => {
+          coin.despawn();
+          this.coinPool.release(coin);
+        },
       };
       coin.setData('entry', entry);
       this.active.push(entry);

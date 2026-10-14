@@ -1,6 +1,7 @@
 import { EventBus, GameEvents } from '../EventBus';
 import { SCORING, MILESTONES } from '../constants';
 import { getBestScore, setBestScore } from '../utils/storage';
+import { sound } from './SoundManager';
 import type { GameOverCause, GameOverPayload } from '../types';
 
 // Tracks survival time + coin bonuses, emits live score updates, fires
@@ -41,6 +42,7 @@ export class ScoreManager {
     while (this.nextMilestoneIndex < MILESTONES.length && score >= MILESTONES[this.nextMilestoneIndex].score) {
       const milestone = MILESTONES[this.nextMilestoneIndex];
       EventBus.emit(GameEvents.Milestone, { score: milestone.score, message: milestone.message });
+      sound.play('milestone');
       this.nextMilestoneIndex += 1;
     }
   }

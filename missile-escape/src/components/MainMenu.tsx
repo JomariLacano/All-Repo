@@ -1,4 +1,6 @@
 import './MainMenu.css';
+import { useTapHandler } from '../hooks/useTapHandler';
+import { MuteButton } from './MuteButton';
 
 interface MainMenuProps {
   best: number;
@@ -7,11 +9,19 @@ interface MainMenuProps {
 }
 
 export function MainMenu({ best, ready, onStart }: MainMenuProps) {
+  const { onPointerUp, onClick } = useTapHandler(onStart);
   return (
     <div className="overlay main-menu">
+      <MuteButton className="menu-mute-btn" />
       <h1 className="title">Missile Escape</h1>
       <p className="subtitle">Run. Jump. Slide. Survive the missiles.</p>
-      <button type="button" className="primary-btn" onClick={onStart} disabled={!ready}>
+      <button
+        type="button"
+        className="primary-btn"
+        onPointerUp={onPointerUp}
+        onClick={onClick}
+        disabled={!ready}
+      >
         {ready ? 'Start Run' : 'Loading…'}
       </button>
       <div className="best-score">Best Score: {best}</div>

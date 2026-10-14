@@ -23,6 +23,13 @@
   font-size: 0.95rem;
 }
 
+.hud-actions {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .pause-btn {
   pointer-events: auto;
   background: rgba(0, 0, 0, 0.4);

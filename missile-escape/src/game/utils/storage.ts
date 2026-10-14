@@ -17,3 +17,19 @@ export function setBestScore(score: number): void {
     // localStorage unavailable (private browsing / disabled) - fail silently.
   }
 }
+
+export function getMuted(): boolean {
+  try {
+    return window.localStorage.getItem(STORAGE_KEYS.muted) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function setMuted(muted: boolean): void {
+  try {
+    window.localStorage.setItem(STORAGE_KEYS.muted, muted ? '1' : '0');
+  } catch {
+    // localStorage unavailable (private browsing / disabled) - fail silently.
+  }
+}

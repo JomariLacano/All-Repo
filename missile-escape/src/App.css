@@ -12,8 +12,9 @@
 }
 
 /* Narrow/portrait phones: fill the real viewport instead of shrinking to a
-   tiny aspect-ratio-locked strip - Phaser's own Scale.FIT still letterboxes
-   the 960x600 design resolution correctly inside this bigger box. */
+   tiny aspect-ratio-locked strip. The page itself stays in portrait -
+   Phaser's own Scale.FIT keeps the 960x600 design letterboxed (landscape-
+   shaped, not stretched) and centered inside this bigger box. */
 @media (max-width: 700px), (orientation: portrait) {
   .game-root {
     width: 100vw;
@@ -32,8 +33,9 @@
 }
 
 .phaser-container canvas {
-  width: 100% !important;
-  height: 100% !important;
+  /* Let Phaser's Scale.FIT size/center the canvas itself - forcing 100%
+     here stretched the 960x600 image whenever the container's aspect
+     ratio didn't match (e.g. portrait phones), distorting it. */
   display: block;
 }
 

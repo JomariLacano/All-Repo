@@ -114,5 +114,6 @@ export const EFFECTS = {
 
 export const STORAGE_KEYS = {
   bestScore: 'missile-escape:best-score',
+  muted: 'missile-escape:muted',
 };
 

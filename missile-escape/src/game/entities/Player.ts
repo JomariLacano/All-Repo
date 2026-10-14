@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { TEX } from '../textures/generateTextures';
 import { PLAYER } from '../constants';
+import { sound } from '../systems/SoundManager';
 import type { PlayerState } from '../types';
 
 const RUN_FRAMES = [TEX.playerRun0, TEX.playerRun1, TEX.playerRun2, TEX.playerRun3] as const;
@@ -56,10 +57,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.jumpsUsed = 1;
       this.state = 'jumping';
       this.setTexture(TEX.playerJump);
+      sound.play('jump');
     } else if (this.jumpsUsed === 1) {
       body.setVelocityY(PLAYER.doubleJumpVelocity);
       this.jumpsUsed = 2;
       this.state = 'jumping';
+      sound.play('doubleJump');
       this.scene.tweens.add({
         targets: this,
         angle: 360,
@@ -75,6 +78,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.state = 'sliding';
     this.setTexture(TEX.playerSlide);
     this.setRotation(0);
+    sound.play('slide');
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setSize(PLAYER.width + 6, PLAYER.slideHeight);
   }

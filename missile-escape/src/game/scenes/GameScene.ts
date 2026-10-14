@@ -15,6 +15,7 @@ import { ParticleManager } from '../systems/ParticleManager';
 import { WorldEventSystem } from '../systems/WorldEventSystem';
 import { VisualEffects } from '../systems/VisualEffects';
 import { InputController } from '../systems/InputController';
+import { sound } from '../systems/SoundManager';
 import type { GameStatus, GameOverCause, NearMissTier } from '../types';
 
 type ArcadeBody = Phaser.Types.Physics.Arcade.GameObjectWithBody;
@@ -163,6 +164,7 @@ export class GameScene extends Phaser.Scene {
     if (!this.survivalModeAnnounced && this.difficulty.survivalMode) {
       this.survivalModeAnnounced = true;
       EventBus.emit(GameEvents.SurvivalModeStart);
+      sound.play('survivalMode');
       this.cameras.main.flash(400, 255, 40, 40, false);
     }
   }
@@ -228,6 +230,7 @@ export class GameScene extends Phaser.Scene {
   private handleCoinCollected(coinObj: Coin): void {
     if (this.status !== 'playing' || !coinObj.active) return;
     this.scoreManager.addCoin(coinObj.isGolden);
+    sound.play(coinObj.isGolden ? 'goldenCoin' : 'coin');
     this.particles.coinBurst(coinObj.x, coinObj.y);
     this.terrain.releaseCoin(coinObj);
   }
@@ -235,6 +238,7 @@ export class GameScene extends Phaser.Scene {
   private handleNearMiss(tier: NearMissTier, bonus: number, x: number, y: number): void {
     if (this.status !== 'playing') return;
     this.scoreManager.addNearMiss(bonus);
+    sound.play('nearMiss');
     this.visualEffects.spawnFloatingText(x, y, NEAR_MISS_TEXT[tier], NEAR_MISS_COLOR[tier]);
     this.visualEffects.flash(tier === 'insane-dodge' ? 1 : tier === 'lucky-escape' ? 0.6 : 0.3);
   }
@@ -256,6 +260,7 @@ export class GameScene extends Phaser.Scene {
     const record = this.worldEvents.findMeteor(meteor);
     if (!record) return;
     this.particles.explosionDebris(meteor.x, meteor.y);
+    sound.play('explosion');
     this.cameras.main.shake(140, 0.008);
     this.worldEvents.despawnMeteor(record);
   }
@@ -263,6 +268,7 @@ export class GameScene extends Phaser.Scene {
   private spawnExplosion(x: number, y: number, shakeIntensity: number): void {
     const intensity = this.difficulty.survivalMode ? shakeIntensity * 1.4 : shakeIntensity;
     this.particles.explosionDebris(x, y);
+    sound.play('explosion');
     const ring = this.add.image(x, y, TEX.shockwave).setDepth(29).setAlpha(0.9).setScale(0.2);
     this.tweens.add({
       targets: ring,
@@ -280,6 +286,7 @@ export class GameScene extends Phaser.Scene {
     this.status = 'gameover';
     this.player.die();
     this.inputController.setEnabled(false);
+    sound.play('gameOver');
     const intensity = this.difficulty.survivalMode ? 0.03 : cause === 'missile' ? 0.02 : 0.012;
     this.cameras.main.shake(220, intensity);
     const payload = this.scoreManager.finish(cause);

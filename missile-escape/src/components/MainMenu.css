@@ -38,6 +38,12 @@
   border-radius: 999px;
 }
 
+.main-menu .menu-mute-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+
 .main-menu kbd {
   display: inline-block;
   padding: 2px 8px;

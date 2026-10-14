@@ -1,0 +1,11 @@
+.mute-btn {
+  pointer-events: auto;
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  width: 36px;
+  height: 36px;
+  font-size: 0.95rem;
+  line-height: 1;
+}

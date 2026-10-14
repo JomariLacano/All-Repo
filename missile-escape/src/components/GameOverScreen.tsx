@@ -1,5 +1,6 @@
 import './GameOverScreen.css';
 import type { GameOverPayload } from '../game/types';
+import { useTapHandler } from '../hooks/useTapHandler';
 
 interface GameOverScreenProps {
   payload: GameOverPayload;
@@ -14,6 +15,7 @@ const CAUSE_LABEL: Record<GameOverPayload['cause'], string> = {
 };
 
 export function GameOverScreen({ payload, onRestart }: GameOverScreenProps) {
+  const { onPointerUp, onClick } = useTapHandler(onRestart);
   return (
     <div className="overlay game-over">
       <h2>Game Over</h2>
@@ -35,7 +37,7 @@ export function GameOverScreen({ payload, onRestart }: GameOverScreenProps) {
         <strong>{payload.survivalTime.toFixed(1)}s</strong>
       </div>
       {payload.isNewBest && <div className="new-best">New Best Score!</div>}
-      <button type="button" className="primary-btn" onClick={onRestart}>
+      <button type="button" className="primary-btn" onPointerUp={onPointerUp} onClick={onClick}>
         Run Again
       </button>
     </div>
