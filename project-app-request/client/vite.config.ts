@@ -6,4 +6,7 @@ export default defineConfig({
   server: {
     port: 5173,
   },
+  preview: {
+    allowedHosts: ['project-request-app-jomarilacano-ecckckfdbqaacrhe.southeastasia-01.azurewebsites.net'],
+  },
 });
