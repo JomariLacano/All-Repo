@@ -1,6 +1,6 @@
 import path from 'path';
 import { JsonFileStore } from './JsonFileStore';
-import { AdminFile, RequestsFile } from '../types';
+import { AdminFile, NotificationsFile, RequestsFile } from '../types';
 
 const DATA_DIR = path.resolve(__dirname, '../../data');
 
@@ -20,6 +20,11 @@ function validateAdminFile(data: unknown): data is AdminFile {
   return 'admin' in data;
 }
 
+function validateNotificationsFile(data: unknown): data is NotificationsFile {
+  if (!isPlainObject(data)) return false;
+  return Array.isArray(data.notifications);
+}
+
 export const requestsStore = new JsonFileStore<RequestsFile>({
   filePath: path.join(DATA_DIR, 'requests.json'),
   defaultValue: { lastReferenceSeq: 0, requests: [] },
@@ -30,4 +35,10 @@ export const adminStore = new JsonFileStore<AdminFile>({
   filePath: path.join(DATA_DIR, 'admin.json'),
   defaultValue: { admin: null },
   validate: validateAdminFile,
+});
+
+export const notificationsStore = new JsonFileStore<NotificationsFile>({
+  filePath: path.join(DATA_DIR, 'notifications.json'),
+  defaultValue: { notifications: [] },
+  validate: validateNotificationsFile,
 });

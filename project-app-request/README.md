@@ -1,9 +1,10 @@
 # Project Request Management App
 
-A complete project-request management web application for a freelance software developer. Potential
-clients can submit a project request without creating an account; the administrator reviews, manages,
-and tracks all requests from a secure dashboard, and receives instant Telegram notifications for every
-new submission.
+A complete project-request management web application for a freelance software developer, Jomari
+Lacano. Potential clients can submit a project request without creating an account, track its status
+at any time, and send follow-up reminders; the administrator reviews, manages, and tracks all requests
+from a secure dashboard with a live notification center, and receives instant Telegram notifications for
+every new submission and follow-up.
 
 ## Tech Stack
 
@@ -14,6 +15,19 @@ dotenv, Telegram Bot API
 
 **Storage:** Local JSON files on the backend only (no database). All reads/writes go through a reusable,
 atomic JSON file storage service — the frontend never touches these files directly.
+
+## Key Features
+
+- **Public request submission** — no account required, with honeypot + rate-limit spam protection.
+- **Public request tracking** (`/track-request`) — clients look up status using their reference number
+  and email (both must match; the error message never reveals which field was wrong).
+- **Client follow-ups ("pings")** — clients can send a reminder from the tracking page, subject to a
+  server-enforced cooldown (default 24h, configurable via `PING_COOLDOWN_HOURS`). Each follow-up sends
+  a Telegram notification and appears in the request's follow-up history.
+- **Admin notification center** — a bell in the admin top bar with unread count, dropdown preview, and a
+  full notifications page (filter, mark read/all read, delete, clear old).
+- **Admin follow-up management** — a timeline of all pings per request, with per-ping Telegram retry,
+  and table-level sorting/filtering by follow-up activity.
 
 ## Project Structure
 
@@ -28,7 +42,7 @@ project-request-app/
       pages/             Public and admin pages
       routes/            ProtectedRoute guard
       types/             Shared TypeScript types
-      utils/             Formatters, validators, status helpers
+      utils/             Formatters, validators, status helpers, ordinal numbers
     .env.example
   server/               Express + TypeScript backend
     src/
@@ -36,15 +50,17 @@ project-request-app/
       controllers/       Route handlers
       middleware/         Auth guard, rate limiting, validation, error handling
       routes/             Express routers
-      services/           Business logic (requests, auth, telegram, dashboard, account)
+      services/           Business logic (requests, auth, telegram, dashboard, account, notifications)
       storage/            Reusable atomic JSON file storage service
       types/              Shared TypeScript types
       utils/              Logger, formatters, sanitizers, Zod schemas
     data/
       requests.json       (git-ignored, created automatically)
       admin.json           (git-ignored, created automatically)
+      notifications.json   (git-ignored, created automatically)
       requests.example.json
       admin.example.json
+      notifications.example.json
     .env.example
   package.json           Root scripts to run both apps together
   .gitignore
@@ -80,6 +96,8 @@ TELEGRAM_CHAT_ID=replace_with_your_chat_id
 ADMIN_INITIAL_NAME=Jomari Lacano
 ADMIN_INITIAL_EMAIL=admin@example.com
 ADMIN_INITIAL_PASSWORD=replace_with_a_strong_password
+APP_TIMEZONE=Asia/Manila
+PING_COOLDOWN_HOURS=24
 ```
 
 - Generate a strong `JWT_SECRET`, e.g. `openssl rand -hex 64`.
@@ -89,6 +107,10 @@ ADMIN_INITIAL_PASSWORD=replace_with_a_strong_password
 - `ADMIN_INITIAL_*` variables are only used to create the **first** admin account on the first server
   start (`server/data/admin.json`). After that file exists, these variables are ignored — update the
   account via the Account Settings page instead.
+- `APP_TIMEZONE` is the IANA timezone (e.g. `Asia/Manila`) used to format dates/times shown to users
+  and sent in Telegram messages. Timestamps are always stored in ISO UTC and only converted for display.
+- `PING_COOLDOWN_HOURS` sets how long a client must wait between follow-up pings on the same request
+  (default `24`). This is enforced on the backend regardless of what the frontend shows.
 
 ### 3. Run in development
 
@@ -120,18 +142,24 @@ file host, or extend `server/src/app.ts` to serve it directly.
 - Passwords are hashed with bcrypt (12 salt rounds); plain-text passwords are never stored or logged.
 - All `/api/admin/*` routes require a valid session (`requireAuth` middleware).
 - Input is validated and sanitized with Zod schemas on every write endpoint.
-- Helmet, CORS (restricted to `CLIENT_URL` with credentials), and rate limiting (general API, login, and
-  public submission endpoints) are enabled by default.
+- Helmet, CORS (restricted to `CLIENT_URL` with credentials), and rate limiting (general API, login,
+  public submission, request tracking, and follow-up/ping endpoints) are enabled by default.
 - The public request form includes a honeypot field; bots that fill it in receive a fake success
   response without anything being persisted.
+- The public tracking and follow-up endpoints require **both** the reference number and the email used
+  at submission time to match (case-insensitively); a reference number alone is never sufficient. On a
+  mismatch, both endpoints return the same generic error so an attacker cannot tell which field failed.
+- The follow-up ("ping") cooldown is enforced entirely on the backend — the frontend only displays the
+  next-allowed time it was told by the server; it never decides whether a ping is allowed.
 - The server never logs the client's proposed amount or other sensitive request content — only safe,
   non-sensitive metadata (e.g. request IDs, HTTP status codes) is logged.
 
 ## JSON File Storage
 
-All persistent data lives in `server/data/requests.json` and `server/data/admin.json`. These files are
-listed in `.gitignore` because they may contain personal information; `requests.example.json` and
-`admin.example.json` are committed as structural references only.
+All persistent data lives in `server/data/requests.json`, `server/data/admin.json`, and
+`server/data/notifications.json`. These files are listed in `.gitignore` because they may contain
+personal information; `requests.example.json`, `admin.example.json`, and `notifications.example.json`
+are committed as structural references only.
 
 The `JsonFileStore` service (`server/src/storage/JsonFileStore.ts`) provides:
 
@@ -144,11 +172,17 @@ The `JsonFileStore` service (`server/src/storage/JsonFileStore.ts`) provides:
 
 ## Telegram Notifications
 
-After a request is saved, the backend sends a formatted message to the configured Telegram chat. If the
-Telegram API call fails (e.g. invalid token, network issue), the saved request is **not** lost — the
-server still returns a success response to the client, and the request's `notificationStatus` is marked
-`failed` with a safe (non-sensitive) error summary. Admins can retry the notification at any time from
-the request's detail view.
+The backend sends a formatted Telegram message to the configured chat whenever:
+
+- A new project request is submitted.
+- A client sends a follow-up ("ping") — the message includes the ping's ordinal number (1st, 2nd, 3rd,
+  21st, …), the optional client message, and a summary of the previous ping for context.
+
+If a Telegram API call fails (e.g. invalid token, network issue), the saved request or ping is **not**
+lost — the server still returns a success response to the client, and the relevant notification status
+is marked `failed` with a safe (non-sensitive) error summary. Admins can retry any failed notification —
+including individual follow-up pings — from the request's detail view, and every send/retry attempt also
+creates an entry in the admin notification center.
 
 ## Deployment Warning — JSON File Storage Limitations
 

@@ -27,3 +27,12 @@ export function getFieldErrors(error: unknown): Record<string, string> {
   }
   return {};
 }
+
+/** Extracts the `nextAllowedAt` cooldown timestamp from a 429 ping-cooldown error response, if present. */
+export function getCooldownNextAllowedAt(error: unknown): string | null {
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data as { nextAllowedAt?: string } | undefined;
+    return data?.nextAllowedAt ?? null;
+  }
+  return null;
+}

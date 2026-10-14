@@ -8,9 +8,18 @@ import {
   patchRequest,
   removeRequest,
   retryRequestNotification,
+  retryRequestPingNotification,
 } from '../controllers/adminRequests.controller';
 import { getDashboard } from '../controllers/dashboard.controller';
 import { getAccount, patchAccount, patchPassword } from '../controllers/account.controller';
+import {
+  clearOldNotificationsHandler,
+  getNotifications,
+  getUnreadCountHandler,
+  markAllNotificationsRead,
+  markNotificationRead,
+  removeNotification,
+} from '../controllers/notifications.controller';
 import { updateRequestSchema, updateAccountSchema, changePasswordSchema } from '../utils/validation.schemas';
 
 const router = Router();
@@ -22,11 +31,22 @@ router.get('/requests/:id', asyncHandler(getRequest));
 router.patch('/requests/:id', validateBody(updateRequestSchema), asyncHandler(patchRequest));
 router.delete('/requests/:id', asyncHandler(removeRequest));
 router.post('/requests/:id/retry-notification', asyncHandler(retryRequestNotification));
+router.post('/requests/:id/pings/:pingId/retry-notification', asyncHandler(retryRequestPingNotification));
 
 router.get('/dashboard', asyncHandler(getDashboard));
 
 router.get('/account', asyncHandler(getAccount));
 router.patch('/account', validateBody(updateAccountSchema), asyncHandler(patchAccount));
 router.patch('/account/password', validateBody(changePasswordSchema), asyncHandler(patchPassword));
+
+// Notifications must be registered in this specific order: static segments
+// like "unread-count" and "read-all" before the ":id" param routes so Express
+// does not treat "unread-count"/"read-all" as an :id value.
+router.get('/notifications/unread-count', asyncHandler(getUnreadCountHandler));
+router.patch('/notifications/read-all', asyncHandler(markAllNotificationsRead));
+router.delete('/notifications/clear-old', asyncHandler(clearOldNotificationsHandler));
+router.get('/notifications', asyncHandler(getNotifications));
+router.patch('/notifications/:id/read', asyncHandler(markNotificationRead));
+router.delete('/notifications/:id', asyncHandler(removeNotification));
 
 export default router;

@@ -10,6 +10,7 @@ export function PublicLayout() {
   const navLinks = [
     { label: 'Home', to: '/' },
     { label: 'Submit a Request', to: '/request' },
+    { label: 'Track Request', to: '/track-request' },
     { label: 'Admin Login', to: '/admin/login' },
   ];
 
@@ -18,13 +19,14 @@ export function PublicLayout() {
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
           <Link to="/" className="flex items-center gap-2 font-semibold text-slate-900 dark:text-white">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-white">
               <Code2 size={18} />
             </span>
-            Freelance Dev Requests
+            <span className="hidden xs:inline">Jomari Lacano — Dev Requests</span>
+            <span className="xs:hidden">Jomari Lacano</span>
           </Link>
 
-          <nav className="hidden items-center gap-1 sm:flex">
+          <nav className="hidden items-center gap-1 md:flex">
             {navLinks.map((link) => (
               <Link
                 key={link.to}
@@ -41,7 +43,7 @@ export function PublicLayout() {
             <DarkModeToggle />
           </nav>
 
-          <div className="flex items-center gap-1 sm:hidden">
+          <div className="flex items-center gap-1 md:hidden">
             <DarkModeToggle />
             <button
               type="button"
@@ -55,7 +57,7 @@ export function PublicLayout() {
         </div>
 
         {menuOpen && (
-          <nav className="flex flex-col gap-1 border-t border-slate-200 px-4 py-3 dark:border-slate-800 sm:hidden">
+          <nav className="flex flex-col gap-1 border-t border-slate-200 px-4 py-3 dark:border-slate-800 md:hidden">
             {navLinks.map((link) => (
               <Link
                 key={link.to}
@@ -79,7 +81,7 @@ export function PublicLayout() {
       </main>
 
       <footer className="border-t border-slate-200 py-6 text-center text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
-        &copy; {new Date().getFullYear()} Freelance Software Development. All rights reserved.
+        &copy; {new Date().getFullYear()} Jomari Lacano — Freelance Software Development. All rights reserved.
       </footer>
     </div>
   );

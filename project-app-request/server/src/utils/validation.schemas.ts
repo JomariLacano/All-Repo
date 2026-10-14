@@ -59,6 +59,7 @@ export const loginSchema = z.object({
 export const updateRequestSchema = z.object({
   status: z.enum(['Pending', 'Reviewing', 'In Progress', 'Done', 'Rejected']).optional(),
   adminNotes: z.string().max(5000).optional(),
+  publicMessage: z.string().max(2000).optional(),
   amountPaid: z.coerce.number().min(0, 'Amount paid must be zero or greater.').optional(),
   rejectionReason: z.string().max(2000).optional().nullable(),
 }).superRefine((data, ctx) => {
@@ -98,3 +99,22 @@ export const changePasswordSchema = z
       });
     }
   });
+
+export const trackRequestSchema = z.object({
+  referenceNumber: z
+    .string()
+    .trim()
+    .min(1, 'Reference number is required.')
+    .max(50, 'Reference number is too long.'),
+  email: z.string().trim().toLowerCase().email('Please enter a valid email address.').max(254),
+});
+
+export const pingRequestSchema = z.object({
+  referenceNumber: z
+    .string()
+    .trim()
+    .min(1, 'Reference number is required.')
+    .max(50, 'Reference number is too long.'),
+  email: z.string().trim().toLowerCase().email('Please enter a valid email address.').max(254),
+  message: z.string().trim().max(500, 'Follow-up message must be at most 500 characters.').optional().or(z.literal('')),
+});

@@ -4,20 +4,39 @@ import {
   getRequestById,
   listRequests,
   retryNotification,
+  retryPingNotification,
   updateRequest,
 } from '../services/requests.service';
 import { RequestCategory, RequestStatus } from '../types';
 import { AuthenticatedRequest } from '../middleware/auth.middleware';
 
+type FollowUpFilter = 'hasFollowUp' | 'noFollowUp' | 'multipleFollowUps';
+const VALID_FOLLOW_UP_FILTERS: FollowUpFilter[] = ['hasFollowUp', 'noFollowUp', 'multipleFollowUps'];
+type SortByOption = 'createdAt' | 'updatedAt' | 'initialProposedAmount' | 'lastPingAt' | 'pingCount';
+const VALID_SORT_BY: SortByOption[] = [
+  'createdAt',
+  'updatedAt',
+  'initialProposedAmount',
+  'lastPingAt',
+  'pingCount',
+];
+
 /** GET /api/admin/requests */
 export async function getRequests(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const { search, status, category, sortBy, sortOrder, page, pageSize } = req.query;
+  const { search, status, category, sortBy, sortOrder, page, pageSize, followUpFilter } = req.query;
 
   const result = await listRequests({
     search: typeof search === 'string' ? search : undefined,
     status: typeof status === 'string' && status ? (status as RequestStatus) : undefined,
     category: typeof category === 'string' && category ? (category as RequestCategory) : undefined,
-    sortBy: sortBy === 'initialProposedAmount' ? 'initialProposedAmount' : 'createdAt',
+    followUpFilter:
+      typeof followUpFilter === 'string' && VALID_FOLLOW_UP_FILTERS.includes(followUpFilter as FollowUpFilter)
+        ? (followUpFilter as FollowUpFilter)
+        : undefined,
+    sortBy:
+      typeof sortBy === 'string' && VALID_SORT_BY.includes(sortBy as SortByOption)
+        ? (sortBy as SortByOption)
+        : 'createdAt',
     sortOrder: sortOrder === 'asc' ? 'asc' : 'desc',
     page: page ? Number(page) : undefined,
     pageSize: pageSize ? Number(pageSize) : undefined,
@@ -63,6 +82,16 @@ export async function retryRequestNotification(req: AuthenticatedRequest, res: R
   const updated = await retryNotification(req.params.id);
   if (!updated) {
     res.status(404).json({ error: 'Request not found.' });
+    return;
+  }
+  res.status(200).json({ request: updated });
+}
+
+/** POST /api/admin/requests/:id/pings/:pingId/retry-notification */
+export async function retryRequestPingNotification(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const updated = await retryPingNotification(req.params.id, req.params.pingId);
+  if (!updated) {
+    res.status(404).json({ error: 'Request or follow-up entry not found.' });
     return;
   }
   res.status(200).json({ request: updated });

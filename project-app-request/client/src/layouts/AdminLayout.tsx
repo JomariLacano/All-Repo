@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ListChecks, Settings, LogOut, Menu, X, Code2 } from 'lucide-react';
+import { LayoutDashboard, ListChecks, Bell, Settings, LogOut, Menu, X, Code2 } from 'lucide-react';
 import { DarkModeToggle } from '../components/ui/DarkModeToggle';
+import { NotificationBell } from '../components/admin/NotificationBell';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
 
 const NAV_ITEMS = [
   { label: 'Dashboard', to: '/admin/dashboard', icon: LayoutDashboard },
   { label: 'Requests', to: '/admin/requests', icon: ListChecks },
+  { label: 'Notifications', to: '/admin/notifications', icon: Bell },
   { label: 'Account Settings', to: '/admin/settings', icon: Settings },
 ];
 
@@ -102,7 +104,10 @@ export function AdminLayout() {
           <h1 className="text-sm font-semibold text-slate-500 dark:text-slate-400 lg:text-base">
             Project Request Management
           </h1>
-          <DarkModeToggle />
+          <div className="flex items-center gap-1">
+            <NotificationBell />
+            <DarkModeToggle />
+          </div>
         </header>
 
         <main className="flex-1 p-4 sm:p-6">

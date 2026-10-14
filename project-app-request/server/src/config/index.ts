@@ -28,5 +28,9 @@ export const config = {
     email: process.env.ADMIN_INITIAL_EMAIL || '',
     password: process.env.ADMIN_INITIAL_PASSWORD || '',
   },
+  /** IANA timezone used to format dates shown to users and sent in Telegram messages. */
+  appTimezone: process.env.APP_TIMEZONE || 'Asia/Manila',
+  /** Minimum number of hours a client must wait between follow-up pings on the same request. */
+  pingCooldownHours: Number(process.env.PING_COOLDOWN_HOURS) > 0 ? Number(process.env.PING_COOLDOWN_HOURS) : 24,
   isProduction: process.env.NODE_ENV === 'production',
 };

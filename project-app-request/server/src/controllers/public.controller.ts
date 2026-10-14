@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { createRequest } from '../services/requests.service';
+import { createRequest, sendPing, trackRequest } from '../services/requests.service';
 import { CreateRequestInput } from '../services/requests.service';
 
 interface CreateRequestBody extends CreateRequestInput {
@@ -36,6 +36,65 @@ export async function submitRequest(req: Request, res: Response): Promise<void> 
   res.status(201).json({
     referenceNumber: created.referenceNumber,
     message: 'Your project request has been submitted successfully.',
+  });
+}
+
+const TRACK_NOT_FOUND_MESSAGE = 'We could not find a request matching the provided information.';
+
+/** POST /api/requests/track — public endpoint. Requires both reference number and email to match. */
+export async function trackRequestHandler(req: Request, res: Response): Promise<void> {
+  const { referenceNumber, email } = req.body as { referenceNumber: string; email: string };
+
+  const result = await trackRequest(referenceNumber, email);
+
+  if (!result) {
+    // Deliberately generic: never reveal whether the reference number or email was the mismatch.
+    res.status(404).json({ error: TRACK_NOT_FOUND_MESSAGE });
+    return;
+  }
+
+  res.status(200).json({ request: result });
+}
+
+/** POST /api/requests/:id/ping — public endpoint. Sends a client follow-up on their own request. */
+export async function sendPingHandler(req: Request, res: Response): Promise<void> {
+  const { id } = req.params;
+  const { referenceNumber, email, message } = req.body as {
+    referenceNumber: string;
+    email: string;
+    message?: string;
+  };
+
+  const result = await sendPing({
+    requestId: id,
+    referenceNumber,
+    email,
+    message: message && message.trim().length > 0 ? message.trim() : null,
+  });
+
+  if (!result.success) {
+    if (result.reason === 'not_found') {
+      res.status(404).json({ error: TRACK_NOT_FOUND_MESSAGE });
+      return;
+    }
+    if (result.reason === 'closed_status') {
+      res.status(400).json({
+        error: 'This request has already been completed or rejected, so follow-ups are no longer available.',
+      });
+      return;
+    }
+    // cooldown
+    res.status(429).json({
+      error: 'You recently sent a follow-up. Please wait before sending another one.',
+      nextAllowedAt: result.nextAllowedAt,
+    });
+    return;
+  }
+
+  res.status(201).json({
+    message: 'Your follow-up has been sent.',
+    pingCount: result.request.pingCount,
+    lastPingAt: result.request.lastPingAt,
   });
 }
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { RefreshCw, Trash2, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { RefreshCw, Trash2, CheckCircle2, XCircle, Clock, Bell } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Select } from '../ui/Select';
@@ -7,6 +7,7 @@ import { Textarea } from '../ui/Textarea';
 import { Input } from '../ui/Input';
 import { Badge } from '../ui/Badge';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { PingHistoryTimeline } from './PingHistoryTimeline';
 import { ProjectRequest, RequestStatus } from '../../types';
 import { formatCurrencyPHP, formatDateTime } from '../../utils/format';
 import { STATUS_OPTIONS } from '../../utils/statusHelpers';
@@ -32,6 +33,7 @@ export function RequestDetailsDrawer({
   const { showToast } = useToast();
   const [status, setStatus] = useState<RequestStatus>('Pending');
   const [adminNotes, setAdminNotes] = useState('');
+  const [publicMessage, setPublicMessage] = useState('');
   const [amountPaid, setAmountPaid] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -44,6 +46,7 @@ export function RequestDetailsDrawer({
     if (request) {
       setStatus(request.status);
       setAdminNotes(request.adminNotes);
+      setPublicMessage(request.publicMessage);
       setAmountPaid(request.amountPaid ? String(request.amountPaid) : '');
       setRejectionReason(request.rejectionReason ?? '');
       setFormError(null);
@@ -68,6 +71,7 @@ export function RequestDetailsDrawer({
       const { request: updated } = await updateAdminRequest(request!.id, {
         status,
         adminNotes,
+        publicMessage,
         amountPaid: status === 'Done' ? Number(amountPaid) : undefined,
         rejectionReason: status === 'Rejected' ? rejectionReason || null : null,
       });
@@ -143,6 +147,22 @@ export function RequestDetailsDrawer({
         }
       >
         <div className="flex flex-col gap-6">
+          {request.pingCount > 0 && (
+            <div
+              className={`flex flex-wrap items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium ${
+                request.pingCount >= 3
+                  ? 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300'
+                  : request.pingCount === 2
+                    ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300'
+                    : 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
+              }`}
+            >
+              <Bell size={14} />
+              {request.pingCount} follow-up{request.pingCount === 1 ? '' : 's'} received
+              {request.lastPingAt && <span>· Last: {formatDateTime(request.lastPingAt)}</span>}
+            </div>
+          )}
+
           {/* Client info */}
           <section>
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
@@ -204,6 +224,19 @@ export function RequestDetailsDrawer({
             </div>
           </section>
 
+          {/* Follow-up / ping history */}
+          <section>
+            <h3 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              <Bell size={13} />
+              Follow-up History ({request.pingCount})
+            </h3>
+            <PingHistoryTimeline
+              requestId={request.id}
+              pingHistory={request.pingHistory}
+              onRetried={onUpdated}
+            />
+          </section>
+
           {/* Admin actions */}
           <section className="flex flex-col gap-4 rounded-xl border border-slate-200 p-4 dark:border-slate-800">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
@@ -237,6 +270,16 @@ export function RequestDetailsDrawer({
                 onChange={(e) => setRejectionReason(e.target.value)}
               />
             )}
+
+            <Textarea
+              label="Public Update Message"
+              rows={3}
+              value={publicMessage}
+              onChange={(e) => setPublicMessage(e.target.value)}
+              maxLength={2000}
+              showCounter
+              hint="Shown to the client on the public tracking page. Keep it client-appropriate."
+            />
 
             <Textarea
               label="Admin Notes"

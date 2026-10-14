@@ -16,14 +16,27 @@
       "status": "Pending",
       "amountPaid": 0,
       "adminNotes": "",
+      "publicMessage": "",
       "rejectionReason": null,
       "notificationStatus": "sent",
       "notificationError": null,
       "statusHistory": [
         { "status": "Pending", "changedAt": "2026-01-15T08:30:00.000Z" }
       ],
+      "pingCount": 1,
+      "lastPingAt": "2026-01-16T10:00:00.000Z",
+      "pingHistory": [
+        {
+          "id": "00000000-0000-4000-8000-000000000020",
+          "pingNumber": 1,
+          "message": "I would like to ask for an update.",
+          "createdAt": "2026-01-16T10:00:00.000Z",
+          "telegramNotificationStatus": "sent",
+          "telegramNotificationError": null
+        }
+      ],
       "createdAt": "2026-01-15T08:30:00.000Z",
-      "updatedAt": "2026-01-15T08:30:00.000Z",
+      "updatedAt": "2026-01-16T10:00:00.000Z",
       "completedAt": null,
       "rejectedAt": null
     }

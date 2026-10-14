@@ -16,6 +16,7 @@ client/.env
 # Application data (may contain personal information)
 server/data/requests.json
 server/data/admin.json
+server/data/notifications.json
 server/data/*.bak
 server/data/*.tmp
 

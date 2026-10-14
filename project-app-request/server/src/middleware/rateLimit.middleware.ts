@@ -25,3 +25,21 @@ export const generalApiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+/** Protects the public request-tracking endpoint from brute-force reference/email guessing. */
+export const trackRequestLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many tracking attempts. Please try again later.' },
+});
+
+/** IP-based limiter for the follow-up/ping endpoint, independent of the per-request cooldown. */
+export const pingLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many follow-up attempts from this device. Please try again later.' },
+});

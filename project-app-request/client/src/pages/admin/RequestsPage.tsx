@@ -1,5 +1,6 @@
 import { ReactNode, useCallback, useEffect, useState } from 'react';
-import { Search, Eye, ChevronLeft, ChevronRight, ArrowUpDown } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Search, Eye, ChevronLeft, ChevronRight, ArrowUpDown, Bell } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
@@ -8,7 +9,7 @@ import { Badge } from '../../components/ui/Badge';
 import { SkeletonTableRows } from '../../components/ui/Skeleton';
 import { EmptyState, ErrorState } from '../../components/ui/EmptyState';
 import { RequestDetailsDrawer } from '../../components/admin/RequestDetailsDrawer';
-import { fetchAdminRequests } from '../../api/adminRequests';
+import { fetchAdminRequestById, fetchAdminRequests, FollowUpFilter } from '../../api/adminRequests';
 import { getErrorMessage } from '../../api/client';
 import { ProjectRequest, RequestCategory, RequestStatus } from '../../types';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -17,12 +18,38 @@ import { statusBadgeClasses, STATUS_OPTIONS, CATEGORY_OPTIONS } from '../../util
 
 const PAGE_SIZE = 10;
 
+type SortByOption = 'createdAt' | 'updatedAt' | 'initialProposedAmount' | 'lastPingAt' | 'pingCount';
+
+const SORT_OPTIONS: { value: SortByOption; label: string }[] = [
+  { value: 'createdAt', label: 'Most Recently Submitted' },
+  { value: 'updatedAt', label: 'Most Recently Updated' },
+  { value: 'lastPingAt', label: 'Most Recently Pinged' },
+  { value: 'pingCount', label: 'Highest Ping Count' },
+  { value: 'initialProposedAmount', label: 'Proposed Amount' },
+];
+
+const FOLLOW_UP_OPTIONS: { value: FollowUpFilter | ''; label: string }[] = [
+  { value: '', label: 'Any Follow-up Status' },
+  { value: 'hasFollowUp', label: 'Has Follow-up' },
+  { value: 'noFollowUp', label: 'No Follow-up' },
+  { value: 'multipleFollowUps', label: 'Multiple Follow-ups' },
+];
+
+function pingRowAccent(pingCount: number): string {
+  if (pingCount >= 3) return 'border-l-4 border-l-red-400';
+  if (pingCount === 2) return 'border-l-4 border-l-amber-400';
+  if (pingCount === 1) return 'border-l-4 border-l-blue-400';
+  return '';
+}
+
 export function RequestsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 350);
   const [status, setStatus] = useState<RequestStatus | ''>('');
   const [category, setCategory] = useState<RequestCategory | ''>('');
-  const [sortBy, setSortBy] = useState<'createdAt' | 'initialProposedAmount'>('createdAt');
+  const [followUpFilter, setFollowUpFilter] = useState<FollowUpFilter | ''>('');
+  const [sortBy, setSortBy] = useState<SortByOption>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [page, setPage] = useState(1);
 
@@ -41,6 +68,7 @@ export function RequestsPage() {
         search: debouncedSearch || undefined,
         status: status || undefined,
         category: category || undefined,
+        followUpFilter: followUpFilter || undefined,
         sortBy,
         sortOrder,
         page,
@@ -54,7 +82,7 @@ export function RequestsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [debouncedSearch, status, category, sortBy, sortOrder, page]);
+  }, [debouncedSearch, status, category, followUpFilter, sortBy, sortOrder, page]);
 
   useEffect(() => {
     void loadRequests();
@@ -63,15 +91,38 @@ export function RequestsPage() {
   // Reset to page 1 whenever filters change.
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, status, category, sortBy, sortOrder]);
+  }, [debouncedSearch, status, category, followUpFilter, sortBy, sortOrder]);
 
-  function toggleSort(field: 'createdAt' | 'initialProposedAmount') {
-    if (sortBy === field) {
-      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setSortBy(field);
-      setSortOrder('desc');
-    }
+  // Deep-link support: notifications can navigate to /admin/requests?open=<requestId>
+  // to automatically open that request's details drawer.
+  useEffect(() => {
+    const openId = searchParams.get('open');
+    if (!openId) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const { request } = await fetchAdminRequestById(openId);
+        if (!cancelled) setSelectedRequest(request);
+      } catch {
+        // Request may have been deleted; silently ignore.
+      } finally {
+        if (!cancelled) {
+          const next = new URLSearchParams(searchParams);
+          next.delete('open');
+          setSearchParams(next, { replace: true });
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  function toggleSortOrder() {
+    setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
   }
 
   function handleUpdated(updated: ProjectRequest) {
@@ -96,8 +147,8 @@ export function RequestsPage() {
 
       {/* Filters */}
       <Card className="p-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="relative">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          <div className="relative sm:col-span-2 lg:col-span-1">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <Input
               placeholder="Search name, email, reference, title..."
@@ -121,24 +172,21 @@ export function RequestsPage() {
               ...CATEGORY_OPTIONS.map((c) => ({ value: c, label: c })),
             ]}
           />
+          <Select
+            value={followUpFilter}
+            onChange={(e) => setFollowUpFilter(e.target.value as FollowUpFilter | '')}
+            options={FOLLOW_UP_OPTIONS}
+          />
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="md"
-              onClick={() => toggleSort('createdAt')}
+            <Select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortByOption)}
+              options={SORT_OPTIONS}
               className="flex-1"
-            >
-              <ArrowUpDown size={14} className="mr-1.5" />
-              Date {sortBy === 'createdAt' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
-            </Button>
-            <Button
-              variant="outline"
-              size="md"
-              onClick={() => toggleSort('initialProposedAmount')}
-              className="flex-1"
-            >
-              <ArrowUpDown size={14} className="mr-1.5" />
-              Amount {sortBy === 'initialProposedAmount' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+            />
+            <Button variant="outline" size="md" onClick={toggleSortOrder} aria-label="Toggle sort direction">
+              <ArrowUpDown size={14} />
+              {sortOrder === 'asc' ? '↑' : '↓'}
             </Button>
           </div>
         </div>
@@ -147,43 +195,57 @@ export function RequestsPage() {
       {/* Table */}
       <Card className="overflow-hidden p-0">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[800px] divide-y divide-slate-200 text-sm dark:divide-slate-800">
+          <table className="w-full min-w-[900px] divide-y divide-slate-200 text-sm dark:divide-slate-800">
             <thead className="bg-slate-50 dark:bg-slate-800/50">
               <tr>
                 <Th>Reference Number</Th>
                 <Th>Client Name</Th>
-                <Th>Project Title</Th>
-                <Th>Category</Th>
-                <Th>Proposed Amount</Th>
+                <Th className="hidden lg:table-cell">Project Title</Th>
+                <Th className="hidden md:table-cell">Category</Th>
+                <Th className="hidden sm:table-cell">Proposed Amount</Th>
                 <Th>Status</Th>
-                <Th>Date Submitted</Th>
+                <Th className="hidden xl:table-cell">Follow-ups</Th>
+                <Th className="hidden md:table-cell">Date Submitted</Th>
                 <Th className="text-right">Actions</Th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-              {isLoading && <SkeletonTableRows rows={6} columns={8} />}
+              {isLoading && <SkeletonTableRows rows={6} columns={9} />}
 
               {!isLoading &&
                 !error &&
                 items.map((req) => (
-                  <tr key={req.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                  <tr
+                    key={req.id}
+                    className={`hover:bg-slate-50 dark:hover:bg-slate-800/40 ${pingRowAccent(req.pingCount)}`}
+                  >
                     <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-slate-700 dark:text-slate-300">
                       {req.referenceNumber}
                     </td>
                     <td className="px-4 py-3 text-slate-900 dark:text-slate-100">{req.fullName}</td>
-                    <td className="max-w-[220px] truncate px-4 py-3 text-slate-700 dark:text-slate-300">
+                    <td className="hidden max-w-[220px] truncate px-4 py-3 text-slate-700 dark:text-slate-300 lg:table-cell">
                       {req.projectTitle}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-slate-700 dark:text-slate-300">
+                    <td className="hidden whitespace-nowrap px-4 py-3 text-slate-700 dark:text-slate-300 md:table-cell">
                       {req.category}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-slate-700 dark:text-slate-300">
+                    <td className="hidden whitespace-nowrap px-4 py-3 text-slate-700 dark:text-slate-300 sm:table-cell">
                       {formatCurrencyPHP(req.initialProposedAmount)}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3">
                       <Badge className={statusBadgeClasses(req.status)}>{req.status}</Badge>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-slate-700 dark:text-slate-300">
+                    <td className="hidden whitespace-nowrap px-4 py-3 xl:table-cell">
+                      {req.pingCount > 0 ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-700 dark:text-slate-300">
+                          <Bell size={12} />
+                          {req.pingCount}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400">—</span>
+                      )}
+                    </td>
+                    <td className="hidden whitespace-nowrap px-4 py-3 text-slate-700 dark:text-slate-300 md:table-cell">
                       {formatDate(req.createdAt)}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right">

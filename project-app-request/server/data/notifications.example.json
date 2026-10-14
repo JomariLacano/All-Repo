@@ -1,0 +1,26 @@
+{
+  "notifications": [
+    {
+      "id": "00000000-0000-4000-8000-000000000010",
+      "type": "new_request",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "referenceNumber": "PR-2026-000001",
+      "title": "New Project Request",
+      "message": "New project request from Juan Dela Cruz.",
+      "pingNumber": null,
+      "isRead": false,
+      "createdAt": "2026-01-15T08:30:00.000Z"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000011",
+      "type": "request_ping",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "referenceNumber": "PR-2026-000001",
+      "title": "Client Follow-up",
+      "message": "Juan Dela Cruz sent the 1st follow-up for PR-2026-000001.",
+      "pingNumber": 1,
+      "isRead": true,
+      "createdAt": "2026-01-16T10:00:00.000Z"
+    }
+  ]
+}

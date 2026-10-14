@@ -4,9 +4,11 @@ import { AdminLayout } from './layouts/AdminLayout';
 import { ProtectedRoute } from './routes/ProtectedRoute';
 import { HomePage } from './pages/public/HomePage';
 import { RequestFormPage } from './pages/public/RequestFormPage';
+import { TrackRequestPage } from './pages/public/TrackRequestPage';
 import { AdminLoginPage } from './pages/admin/AdminLoginPage';
 import { DashboardPage } from './pages/admin/DashboardPage';
 import { RequestsPage } from './pages/admin/RequestsPage';
+import { NotificationsPage } from './pages/admin/NotificationsPage';
 import { AccountSettingsPage } from './pages/admin/AccountSettingsPage';
 import { AuthProvider } from './hooks/useAuth';
 import { ToastProvider } from './hooks/useToast';
@@ -21,6 +23,7 @@ function App() {
             <Route element={<PublicLayout />}>
               <Route path="/" element={<HomePage />} />
               <Route path="/request" element={<RequestFormPage />} />
+              <Route path="/track-request" element={<TrackRequestPage />} />
               <Route path="/admin/login" element={<AdminLoginPage />} />
             </Route>
 
@@ -29,6 +32,7 @@ function App() {
                 <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
                 <Route path="/admin/dashboard" element={<DashboardPage />} />
                 <Route path="/admin/requests" element={<RequestsPage />} />
+                <Route path="/admin/notifications" element={<NotificationsPage />} />
                 <Route path="/admin/settings" element={<AccountSettingsPage />} />
               </Route>
             </Route>
