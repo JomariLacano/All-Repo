@@ -25,7 +25,15 @@ export class Hammer {
     const body = this.hitbox.body as Phaser.Physics.Arcade.Body;
     body.setAllowGravity(false);
     body.setImmovable(true);
-    body.setCircle(17);
+    // setCircle() alone keeps the body's offset at (0,0), i.e. anchored to
+    // the sprite's top-left frame corner - since this tracking sprite's
+    // frame (10x10) is far smaller than the 34px hit circle, that left the
+    // collider centered ~12px down-right of the actual swung head position.
+    // Centering the offset here makes the hitbox match where the mallet head
+    // is actually drawn, left or right of the pivot.
+    const radius = 17;
+    const centerOffset = this.hitbox.width / 2 - radius;
+    body.setCircle(radius, centerOffset, centerOffset);
     body.enable = false;
     this.hitbox.setActive(false);
     hazardGroup.add(this.hitbox);
