@@ -33,7 +33,12 @@ export class SawBlade extends Phaser.Physics.Arcade.Sprite {
     this.setVisible(true);
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.enable = true;
-    body.setCircle(this.width * 0.42);
+    // setCircle() keeps the body's existing (0,0) offset unless told
+    // otherwise, which anchors the circle to the frame's top-left corner
+    // instead of its center - explicitly center it on the blade sprite.
+    const radius = this.width * 0.42;
+    const circleOffset = this.width / 2 - radius;
+    body.setCircle(radius, circleOffset, circleOffset);
     body.reset(x, y);
   }
 

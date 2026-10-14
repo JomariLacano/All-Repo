@@ -38,9 +38,12 @@ export class Missile extends Phaser.Physics.Arcade.Sprite {
     this.setRotation(angle);
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.enable = true;
-    body.reset(fromX, fromY);
     const scale = isSuper ? MISSILE.superMissileScale : 1;
+    // Resize before reset() - setSize() recenters the body's offset but
+    // doesn't resync position, so sizing after reset left the hitbox
+    // trailing one frame behind the sprite for every freshly spawned missile.
     body.setSize(this.width * 0.75 * scale, this.height * 0.6 * scale, true);
+    body.reset(fromX, fromY);
     const launchSpeed = isSuper ? speed * MISSILE.superMissileSpeedMultiplier : speed;
     this.scene.physics.velocityFromRotation(angle, launchSpeed, body.velocity);
   }
