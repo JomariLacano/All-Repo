@@ -1,0 +1,31 @@
+{
+  "lastReferenceSeq": 1,
+  "requests": [
+    {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "referenceNumber": "PR-2026-000001",
+      "fullName": "Juan Dela Cruz",
+      "email": "juan@example.com",
+      "contactNumber": "09171234567",
+      "preferredContactMethod": "Phone Call",
+      "projectTitle": "Inventory Management System",
+      "description": "I need a simple inventory management system for my small retail business with barcode scanning support.",
+      "initialProposedAmount": 25000,
+      "category": "Web Application",
+      "otherCategory": null,
+      "status": "Pending",
+      "amountPaid": 0,
+      "adminNotes": "",
+      "rejectionReason": null,
+      "notificationStatus": "sent",
+      "notificationError": null,
+      "statusHistory": [
+        { "status": "Pending", "changedAt": "2026-01-15T08:30:00.000Z" }
+      ],
+      "createdAt": "2026-01-15T08:30:00.000Z",
+      "updatedAt": "2026-01-15T08:30:00.000Z",
+      "completedAt": null,
+      "rejectedAt": null
+    }
+  ]
+}
