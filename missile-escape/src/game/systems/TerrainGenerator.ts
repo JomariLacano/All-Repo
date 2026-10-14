@@ -49,8 +49,14 @@ export class TerrainGenerator {
     this.difficulty = difficulty;
     this.groundGroup = scene.physics.add.staticGroup();
     this.platformGroup = scene.physics.add.staticGroup();
-    this.hazardGroup = scene.physics.add.group();
-    this.coinGroup = scene.physics.add.group();
+    // Arcade groups re-apply their own config defaults (allowGravity: true)
+    // to every member as it's added, silently undoing the setAllowGravity(false)
+    // each hazard/coin already set on itself in its constructor - that's why
+    // coins (and ground-level hazards) were quietly free-falling off the
+    // bottom of the world a moment after spawning. Declaring the group's own
+    // default keeps it in sync with what every member actually wants.
+    this.hazardGroup = scene.physics.add.group({ allowGravity: false });
+    this.coinGroup = scene.physics.add.group({ allowGravity: false });
 
     this.spikePool = new ObjectPool(() => new Spike(scene, this.hazardGroup), 6);
     this.sawPool = new ObjectPool(() => new SawBlade(scene, this.hazardGroup), 4);

@@ -5,6 +5,7 @@ import { useTapHandler } from '../hooks/useTapHandler';
 interface GameOverScreenProps {
   payload: GameOverPayload;
   onRestart: () => void;
+  onBackToMenu: () => void;
 }
 
 const CAUSE_LABEL: Record<GameOverPayload['cause'], string> = {
@@ -14,8 +15,9 @@ const CAUSE_LABEL: Record<GameOverPayload['cause'], string> = {
   meteor: 'A meteor crushed you!',
 };
 
-export function GameOverScreen({ payload, onRestart }: GameOverScreenProps) {
-  const { onPointerUp, onClick } = useTapHandler(onRestart);
+export function GameOverScreen({ payload, onRestart, onBackToMenu }: GameOverScreenProps) {
+  const restart = useTapHandler(onRestart);
+  const backToMenu = useTapHandler(onBackToMenu);
   return (
     <div className="overlay game-over">
       <h2>Game Over</h2>
@@ -37,8 +39,16 @@ export function GameOverScreen({ payload, onRestart }: GameOverScreenProps) {
         <strong>{payload.survivalTime.toFixed(1)}s</strong>
       </div>
       {payload.isNewBest && <div className="new-best">New Best Score!</div>}
-      <button type="button" className="primary-btn" onPointerUp={onPointerUp} onClick={onClick}>
+      <button type="button" className="primary-btn" onPointerUp={restart.onPointerUp} onClick={restart.onClick}>
         Run Again
+      </button>
+      <button
+        type="button"
+        className="secondary-btn"
+        onPointerUp={backToMenu.onPointerUp}
+        onClick={backToMenu.onClick}
+      >
+        Back to Menu
       </button>
     </div>
   );

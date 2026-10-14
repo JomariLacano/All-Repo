@@ -15,7 +15,7 @@ type Screen = 'menu' | 'playing';
 function App() {
   const [screen, setScreen] = useState<Screen>('menu');
   const [paused, setPaused] = useState(false);
-  const { score, coins, best, gameOver, banner, sceneReady, startGame, restartGame } = useGameEvents();
+  const { score, coins, best, gameOver, banner, sceneReady, startGame, restartGame, returnToMenu } = useGameEvents();
 
   const handleStart = useCallback(() => {
     setScreen('playing');
@@ -27,6 +27,12 @@ function App() {
     setPaused(false);
     restartGame();
   }, [restartGame]);
+
+  const handleBackToMenu = useCallback(() => {
+    setPaused(false);
+    setScreen('menu');
+    returnToMenu();
+  }, [returnToMenu]);
 
   const handlePause = useCallback(() => {
     setPaused(true);
@@ -52,7 +58,7 @@ function App() {
       )}
       {isPlaying && paused && <PauseOverlay onResume={handleResume} />}
       {screen === 'playing' && gameOver && (
-        <GameOverScreen payload={gameOver} onRestart={handleRestart} />
+        <GameOverScreen payload={gameOver} onRestart={handleRestart} onBackToMenu={handleBackToMenu} />
       )}
       {isPlaying && <MilestoneBanner banner={banner} />}
     </div>

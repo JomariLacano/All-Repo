@@ -42,7 +42,10 @@ export class MissileSystem {
     this.player = player;
     this.difficulty = difficulty;
     this.onNearMiss = onNearMiss;
-    this.missileGroup = scene.physics.add.group();
+    // See TerrainGenerator's hazard/coin groups - without this, the group's
+    // own default (allowGravity: true) overrides the Missile's own
+    // setAllowGravity(false), making missiles quietly arc downward.
+    this.missileGroup = scene.physics.add.group({ allowGravity: false });
     this.missilePool = new ObjectPool(() => new Missile(scene, this.missileGroup), 8);
     this.markerPool = new ObjectPool(() => new WarningMarker(scene), 6);
     this.rollNextSpawn();

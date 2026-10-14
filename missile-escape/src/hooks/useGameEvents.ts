@@ -80,5 +80,12 @@ export function useGameEvents() {
     EventBus.emit(GameEvents.RestartGame);
   }, []);
 
-  return { score, coins, best, gameOver, banner, sceneReady, startGame, restartGame };
+  // Dismisses the game-over screen without starting a new run - the Phaser
+  // scene just stays frozen on its last frame until Start Run is pressed again.
+  const returnToMenu = useCallback(() => {
+    setGameOver(null);
+    setBanner(null);
+  }, []);
+
+  return { score, coins, best, gameOver, banner, sceneReady, startGame, restartGame, returnToMenu };
 }
