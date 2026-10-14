@@ -59,7 +59,12 @@ export class Hammer {
     if (!this.running) return;
     const angle = Math.sin(time * 0.0016 * this.speedScale) * this.amplitude;
     this.visual.setRotation(angle);
-    const headX = this.anchorX + Math.sin(angle) * HAMMER_LENGTH;
+    // Phaser rotation is clockwise-positive, which (with screen Y pointing
+    // down) swings a point starting straight below the pivot towards
+    // NEGATIVE x as angle increases - headX was using +sin(angle), which
+    // put the hitbox on the mirror-opposite side of wherever the visual
+    // mallet head actually swung to.
+    const headX = this.anchorX - Math.sin(angle) * HAMMER_LENGTH;
     const headY = this.anchorY + Math.cos(angle) * HAMMER_LENGTH;
     const body = this.hitbox.body as Phaser.Physics.Arcade.Body;
     body.reset(headX, headY);
